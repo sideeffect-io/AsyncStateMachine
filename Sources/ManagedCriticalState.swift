@@ -1,4 +1,3 @@
-
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the Swift Async Algorithms open source project
@@ -10,7 +9,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_implementationOnly import Darwin
+import Darwin
 
 struct ManagedCriticalState<State> {
     private final class LockedBuffer: ManagedBuffer<State, os_unfair_lock> {
