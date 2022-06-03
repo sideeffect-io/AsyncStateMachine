@@ -262,7 +262,7 @@ where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
         Task {
             await withTaskGroup(of: Void.self) { group in
                 middlewares.forEach({ middleware in
-                    group.addTaskUnlessCancelled(priority: middleware.priority) { 
+                    _ = group.addTaskUnlessCancelled(priority: middleware.priority) { 
                         await middleware.middleware(value)
                     }
                 })
