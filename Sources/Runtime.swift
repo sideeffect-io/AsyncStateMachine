@@ -344,7 +344,7 @@ where S: DSLCompatible {
     }
     
     func cancelTasks(for state: S) {
-        for (key, wip) in self.storage where wip.cancellationPredicate(state) {
+        for (_, wip) in self.storage where wip.cancellationPredicate(state) {
             wip.task.cancel()
         }
     }
