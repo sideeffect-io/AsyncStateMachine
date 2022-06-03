@@ -327,7 +327,6 @@ where S: DSLCompatible {
     
     var storage = [UUID: WorkInProgress]()
     
-    @discardableResult
     func register(
         id: UUID,
         cancellationPredicate: @escaping (S) -> Bool,
