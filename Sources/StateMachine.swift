@@ -1,6 +1,6 @@
 public struct StateMachine<S, E, O>
 where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
-    let initial: S
+    public let initial: S
     let whenStates: [When<S, E, O>]
     
     public init(
