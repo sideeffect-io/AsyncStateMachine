@@ -1,14 +1,14 @@
 import Darwin
 
-struct ManagedCriticalState<State> {
-    final class LockedBuffer: ManagedBuffer<State, os_unfair_lock> {
-        deinit {
-            _ = withUnsafeMutablePointerToElements { lock in
-                lock.deinitialize(count: 1)
-            }
+final class LockedBuffer<State>: ManagedBuffer<State, os_unfair_lock> {
+    deinit {
+        self.withUnsafeMutablePointerToElements { lock in
+            lock.deinitialize(count: 1)
         }
     }
-    
+}
+
+struct ManagedCriticalState<State> {
     let buffer: ManagedBuffer<State, os_unfair_lock>
     
     init(_ initial: State) {
