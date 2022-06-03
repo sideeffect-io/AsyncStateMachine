@@ -2,7 +2,7 @@ import Darwin
 
 final class LockedBuffer<State>: ManagedBuffer<State, os_unfair_lock> {
     deinit {
-        self.withUnsafeMutablePointerToElements { lock in
+        _ = self.withUnsafeMutablePointerToElements { lock in
             lock.deinitialize(count: 1)
         }
     }
