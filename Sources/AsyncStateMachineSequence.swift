@@ -5,7 +5,7 @@ where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
     public typealias Element = S
     public typealias AsyncIterator = Iterator
     
-    let stateMachine: StateMachine<S, E, O>
+    public let stateMachine: StateMachine<S, E, O>
     var runtime: Runtime<S, E, O>
     let channel: AsyncChannel<E>
     
