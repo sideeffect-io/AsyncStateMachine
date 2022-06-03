@@ -1,18 +1,7 @@
-//===----------------------------------------------------------------------===//
-//
-// This source file is part of the Swift Async Algorithms open source project
-//
-// Copyright (c) 2022 Apple Inc. and the Swift project authors
-// Licensed under Apache License v2.0 with Runtime Library Exception
-//
-// See https://swift.org/LICENSE.txt for license information
-//
-//===----------------------------------------------------------------------===//
-
 import Darwin
 
 struct ManagedCriticalState<State> {
-    private final class LockedBuffer: ManagedBuffer<State, os_unfair_lock> {
+    final class LockedBuffer: ManagedBuffer<State, os_unfair_lock> {
         deinit {
             _ = withUnsafeMutablePointerToElements { lock in
                 lock.deinitialize(count: 1)
@@ -20,7 +9,7 @@ struct ManagedCriticalState<State> {
         }
     }
     
-    private let buffer: ManagedBuffer<State, os_unfair_lock>
+    let buffer: ManagedBuffer<State, os_unfair_lock>
     
     init(_ initial: State) {
         buffer = LockedBuffer.create(minimumCapacity: 1) { buffer in
