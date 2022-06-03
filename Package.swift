@@ -20,10 +20,10 @@ let package = Package(
         .target(
             name: "AsyncStateMachine",
             dependencies: [],
-            path: "Sources/AsyncStateMachine"),
+            path: "Sources"),
         .testTarget(
             name: "AsyncStateMachineTests",
             dependencies: ["AsyncStateMachine"],
-            path: "Tests/AsyncStateMachine"),
+            path: "Tests"),
     ]
 )
