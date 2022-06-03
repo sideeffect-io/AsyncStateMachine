@@ -12,10 +12,10 @@
 
 @_implementationOnly import Darwin
 
-public struct ManagedCriticalState<State> {
+struct ManagedCriticalState<State> {
     private final class LockedBuffer: ManagedBuffer<State, os_unfair_lock> {
         deinit {
-            withUnsafeMutablePointerToElements { lock in
+            _ = withUnsafeMutablePointerToElements { lock in
                 lock.deinitialize(count: 1)
             }
         }
@@ -23,7 +23,7 @@ public struct ManagedCriticalState<State> {
     
     private let buffer: ManagedBuffer<State, os_unfair_lock>
     
-    public init(_ initial: State) {
+    init(_ initial: State) {
         buffer = LockedBuffer.create(minimumCapacity: 1) { buffer in
             buffer.withUnsafeMutablePointerToElements { lock in
                 lock.initialize(to: os_unfair_lock())
@@ -33,7 +33,7 @@ public struct ManagedCriticalState<State> {
     }
     
     @discardableResult
-    public func withCriticalRegion<R>(
+    func withCriticalRegion<R>(
         _ critical: (inout State) throws -> R
     ) rethrows -> R {
         try buffer.withUnsafeMutablePointers { header, lock in
