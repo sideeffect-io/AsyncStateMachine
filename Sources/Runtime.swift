@@ -22,6 +22,15 @@ public struct RuntimeStrategy<S> where S: DSLCompatible {
     }
 }
 
+struct EventEntryPoint<E>
+where E: DSLCompatible {
+    var block: (E) async -> Void
+    
+    init() {
+        self.block = { _ in }
+    }
+}
+
 struct SideEffects<S, E, O>
 where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
     typealias SideEffect = (
@@ -83,6 +92,7 @@ where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
     let sideEffectsState = ManagedCriticalState(SideEffects<S, E, O>())
     let stateMiddlewaresState = ManagedCriticalState(Middlewares<S>())
     let eventMiddlewaresState = ManagedCriticalState(Middlewares<E>())
+    let eventEntryPoint = ManagedCriticalState<EventEntryPoint<E>>(EventEntryPoint())
     var worksInProgress = WorksInProgress<S>()
     
     public init() {}
@@ -236,6 +246,46 @@ where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
             )
         }
         return self
+    }
+    
+    @discardableResult
+    public func connectAsReceiver(
+        to connector: Connector<E>
+    ) -> Self {
+        connector.register { [weak self] event in
+            print("registered connection is pinged")
+            guard let block = self?.eventEntryPoint.withCriticalRegion({ eventEntryPoint in
+                eventEntryPoint.block
+            }) else { return }
+            await block(event)
+        }
+        return self
+    }
+    
+    @discardableResult
+    public func connectAsSender<OtherE>(
+        to connector: Connector<OtherE>,
+        when state: S,
+        send event: OtherE
+    ) -> Self {
+        return self.register(middleware: { (inputState: S) in
+            guard inputState.matches(case: state) else { return }
+            print("ping")
+            await connector.ping(event)
+        })
+    }
+    
+    @discardableResult
+    public func connectAsSender<StateAssociatedValue, OtherE>(
+        to connector: Connector<OtherE>,
+        when state: @escaping (StateAssociatedValue) -> S,
+        send event: @escaping (StateAssociatedValue) -> OtherE
+    ) -> Self {
+        return self.register(middleware: { (inputState: S) in
+            guard let value = inputState.associatedValue(matching: state)
+            else { return }
+            await connector.ping(event(value))
+        })
     }
     
     var stateMiddlewares: [Middlewares<S>.Middleware] {

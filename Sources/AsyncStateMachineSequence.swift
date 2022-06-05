@@ -16,6 +16,9 @@ where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
         self.stateMachine = stateMachine
         self.runtime = runtime
         self.channel = AsyncChannel()
+        self.runtime.register(
+            eventEntryPoint: { [weak channel] event in await channel?.send(event) }
+        )
     }
     
     public func send(_ event: E) async {
