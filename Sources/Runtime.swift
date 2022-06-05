@@ -248,6 +248,12 @@ where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
         return self
     }
     
+    func register(eventEntryPoint block: @escaping (E) async -> Void) {
+        self.eventEntryPoint.withCriticalRegion { eventEntryPoint in
+            eventEntryPoint.block = block
+        }
+    }
+    
     @discardableResult
     public func connectAsReceiver(
         to connector: Connector<E>
