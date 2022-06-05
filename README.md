@@ -354,3 +354,20 @@ self.sequence.binding(
 ```
 
 Allows to create a SwiftUI binding on any value, sending an Event when the binding changes.
+
+- Connecting two state machines:
+
+```swift
+let connector = Connector<OtherEvent>()
+
+let runtime = Runtime<State, Event, Output>()
+	...
+	.connectAsSender(to: connector, when: State.closed, send: OtherEvent.refresh)
+	
+
+let otherRuntime = Runtime<OtherState, OtherEvent, OtherOutput>()
+	...
+	.connectAsReceiver(to: connector)
+```
+
+It will send the event `.refresh` in the other state machine when the first state machine's state is `.closed`.
