@@ -259,7 +259,6 @@ where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
         to connector: Connector<E>
     ) -> Self {
         connector.register { [weak self] event in
-            print("registered connection is pinged")
             guard let block = self?.eventEntryPoint.withCriticalRegion({ eventEntryPoint in
                 eventEntryPoint.block
             }) else { return }
@@ -276,7 +275,6 @@ where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
     ) -> Self {
         return self.register(middleware: { (inputState: S) in
             guard inputState.matches(case: state) else { return }
-            print("ping")
             await connector.ping(event)
         })
     }
