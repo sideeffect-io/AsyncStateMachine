@@ -370,4 +370,4 @@ let otherRuntime = Runtime<OtherState, OtherEvent, OtherOutput>()
 	.connectAsReceiver(to: connector)
 ```
 
-It will send the event `.refresh` in the other state machine when the first state machine's state is `.closed`.
+It will send the event `OtherEvent.refresh` in the other state machine when the first state machine's state is `State.closed`.
