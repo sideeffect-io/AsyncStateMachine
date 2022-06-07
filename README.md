@@ -1,7 +1,7 @@
 # Async State Machine
 **Async State Machine** aims to provide a way to structure an application thanks to state machines. The goal is to identify the states and the side effects involved in each feature and to model them in a consistent and scalable way.
 
-## Key points
+## Key points:
 - Each feature is a Moore state machine: no need for a global store
 - State machines are declarative: a DSL offers a natural and concise syntax
 - Structured concurrency is at the core: a state machine is an AsyncSequence
