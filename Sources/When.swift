@@ -1,13 +1,13 @@
-public struct When<S, E, O>
+public struct When<S, E, O>: Sendable
 where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
-    let predicate: (S) -> Bool
-    let output: (S) -> O?
-    let transitions: (S) -> [On<S, E>]
+    let predicate: @Sendable (S) -> Bool
+    let output: @Sendable (S) -> O?
+    let transitions: @Sendable (S) -> [On<S, E>]
     
     public init(
         states: OneOf<S>,
         execute: @escaping (S) -> Execute<O>,
-        @TransitionsBuilder<S, E> transitions: @escaping (S) -> [On<S, E>]
+        @TransitionsBuilder<S, E> transitions: @escaping @Sendable (S) -> [On<S, E>]
     ) {
         self.predicate = states.predicate
         self.output = { inputState in execute(inputState).output }

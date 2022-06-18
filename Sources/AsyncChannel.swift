@@ -168,7 +168,7 @@ public final class AsyncChannel<Element: Sendable>: AsyncSequence, Sendable {
         }
     }
     
-    func finishAll() {
+    func terminateAll() {
         let (sends, nexts) = state.withCriticalRegion { state -> ([UnsafeContinuation<UnsafeContinuation<Element?, Never>?, Never>], Set<Awaiting>) in
             if state.terminal {
                 return ([], [])
@@ -195,7 +195,7 @@ public final class AsyncChannel<Element: Sendable>: AsyncSequence, Sendable {
     
     func _send(_ element: Element) async {
         await withTaskCancellationHandler {
-            finishAll()
+            terminateAll()
         } operation: {
             let continuation: UnsafeContinuation<Element?, Never>? = await withUnsafeContinuation { continuation in
                 state.withCriticalRegion { state -> UnsafeResumption<UnsafeContinuation<Element?, Never>?, Never>? in
@@ -233,7 +233,7 @@ public final class AsyncChannel<Element: Sendable>: AsyncSequence, Sendable {
     
     /// Send a finish to all awaiting iterations.
     public func finish() {
-        finishAll()
+        terminateAll()
     }
     
     /// Create an `Iterator` for iteration of an `AsyncChannel`

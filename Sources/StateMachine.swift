@@ -1,5 +1,5 @@
-public struct StateMachine<S, E, O>
-where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
+public struct StateMachine<S, E, O>: Sendable
+where S: DSLCompatible & Sendable, E: DSLCompatible, O: DSLCompatible {
     public let initial: S
     let whenStates: [When<S, E, O>]
     

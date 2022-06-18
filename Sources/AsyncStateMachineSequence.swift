@@ -1,12 +1,12 @@
 import Foundation
 
-public final class AsyncStateMachineSequence<S, E, O>: AsyncSequence
-where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
+public final class AsyncStateMachineSequence<S, E, O>: AsyncSequence, Sendable
+where S: DSLCompatible & Sendable, E: DSLCompatible & Sendable, O: DSLCompatible {
     public typealias Element = S
     public typealias AsyncIterator = Iterator
     
     public let stateMachine: StateMachine<S, E, O>
-    var runtime: Runtime<S, E, O>
+    let runtime: Runtime<S, E, O>
     let channel: AsyncChannel<E>
     
     public init(

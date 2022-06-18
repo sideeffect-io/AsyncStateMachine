@@ -1,7 +1,7 @@
 import Foundation
 
-public struct RuntimeStrategy<S> where S: DSLCompatible {
-    let predicate: (S) -> Bool
+public struct RuntimeStrategy<S>: Sendable where S: DSLCompatible {
+  let predicate: @Sendable (S) -> Bool
     
     public static func cancel(when state: S) -> RuntimeStrategy {
         RuntimeStrategy { input in
@@ -31,19 +31,19 @@ where E: DSLCompatible {
     }
 }
 
-struct SideEffects<S, E, O>
+struct SideEffects<S, E, O>: Sendable
 where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
     typealias SideEffect = (
-        predicate: (O) -> Bool,
-        sideEffect: (O) -> AnyAsyncSequence<E>?,
+        predicate: @Sendable (O) -> Bool,
+        sideEffect: @Sendable (O) -> AnyAsyncSequence<E>?,
         priority: TaskPriority?,
         strategy: RuntimeStrategy<S>?
     )
     var storage = [SideEffect]()
     
     mutating func register(
-        predicate: @escaping (O) -> Bool,
-        sideEffect: @escaping (O) -> AnyAsyncSequence<E>?,
+        predicate: @escaping @Sendable (O) -> Bool,
+        sideEffect: @escaping @Sendable (O) -> AnyAsyncSequence<E>?,
         priority: TaskPriority?,
         strategy: RuntimeStrategy<S>?
     ) {
@@ -81,7 +81,7 @@ struct Middlewares<T> {
     }
 }
 
-public class Runtime<S, E, O>
+public final class Runtime<S, E, O>: Sendable
 where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
     public typealias WorkToPerform = (
         events: AnyAsyncSequence<E>,
@@ -93,7 +93,7 @@ where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
     let stateMiddlewaresState = ManagedCriticalState(Middlewares<S>())
     let eventMiddlewaresState = ManagedCriticalState(Middlewares<E>())
     let eventEntryPoint = ManagedCriticalState<EventEntryPoint<E>>(EventEntryPoint())
-    var worksInProgress = WorksInProgress<S>()
+    let worksInProgress = WorksInProgress<S>()
     
     public init() {}
 
@@ -119,10 +119,10 @@ where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
         priority: TaskPriority? = nil,
         strategy: RuntimeStrategy<S>? = nil
     ) -> Self {
-        let predicate: (O) -> Bool = { currentOutput in
+        let predicate: @Sendable (O) -> Bool = { currentOutput in
             currentOutput.matches(case: output)
         }
-        let sideEffect: (O) -> AnyAsyncSequence<E> = { _ in
+        let sideEffect: @Sendable (O) -> AnyAsyncSequence<E> = { _ in
             sideEffect()
         }
         self.sideEffectsState.withCriticalRegion { sideEffects in
@@ -162,10 +162,10 @@ where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
         priority: TaskPriority? = nil,
         strategy: RuntimeStrategy<S>? = nil
     ) -> Self {
-        let predicate: (O) -> Bool = { currentOutput in
+        let predicate: @Sendable (O) -> Bool = { currentOutput in
             currentOutput.matches(case: output)
         }
-        let sideEffect: (O) -> AnyAsyncSequence<E>? = { currentOutput in
+        let sideEffect: @Sendable (O) -> AnyAsyncSequence<E>? = { currentOutput in
             if let outputAssociatedValue: OutputAssociatedValue = currentOutput.associatedValue() {
                 return sideEffect(outputAssociatedValue)
             }

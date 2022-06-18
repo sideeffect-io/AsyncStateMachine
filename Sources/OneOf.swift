@@ -1,8 +1,8 @@
-public struct OneOf<S>
+public struct OneOf<S>: Sendable
 where S: DSLCompatible {
-    let predicate: (S) -> Bool
+    let predicate: @Sendable (S) -> Bool
     
-    init(predicate: @escaping (S) -> Bool) {
+    init(predicate: @escaping @Sendable (S) -> Bool) {
         self.predicate = predicate
     }
     
