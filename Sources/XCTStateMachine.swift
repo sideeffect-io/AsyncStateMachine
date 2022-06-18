@@ -22,7 +22,7 @@ where
                     """
                 The assertion failed for state \(state) and event \(event):
                 expected new state: \(expectedState),
-                received new state: \(receivedState)
+                received new state: \(String(describing: receivedState))
 """
                 )
                 return self
@@ -61,7 +61,7 @@ where
                     """
                 The assertion failed for state \(state):
                 expected output: \(expectedOutput),
-                received output: \(receivedOutput)
+                received output: \(String(describing: receivedOutput))
 """
                 )
                 return self
