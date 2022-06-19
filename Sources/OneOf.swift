@@ -1,36 +1,36 @@
-public struct OneOf<S>: Sendable
-where S: DSLCompatible {
-    let predicate: @Sendable (S) -> Bool
+public struct OneOf<T>: Sendable
+where T: DSLCompatible {
+    let predicate: @Sendable (T) -> Bool
     
-    init(predicate: @escaping @Sendable (S) -> Bool) {
+    init(predicate: @escaping @Sendable (T) -> Bool) {
         self.predicate = predicate
     }
     
-    public init(@OneOfBuilder<S> _ oneOf: () -> OneOf<S>) {
+    public init(@OneOfBuilder<T> _ oneOf: () -> OneOf<T>) {
         self = oneOf()
     }
 }
 
 @resultBuilder
-public enum OneOfBuilder<S> 
-where S: DSLCompatible {
+public enum OneOfBuilder<T>
+where T: DSLCompatible {
     public static func buildExpression(
-        _ expression: S
-    ) -> (S) -> Bool {
-        { inputState in
-            inputState.matches(case: expression)
+        _ expression: T
+    ) -> (T) -> Bool {
+        { input in
+            input.matches(case: expression)
         }
     }
     
-    public static func buildExpression<StateAssociatedValue>(
-        _ expression: @escaping (StateAssociatedValue) -> S
-    ) -> (S) -> Bool {
-        { inputState in
-            inputState.matches(case: expression)
+    public static func buildExpression<AssociatedValue>(
+        _ expression: @escaping (AssociatedValue) -> T
+    ) -> (T) -> Bool {
+        { input in
+            input.matches(case: expression)
         }
     }
     
-    public static func buildBlock(_ components: ((S) -> Bool)...) -> OneOf<S> {
-        OneOf(predicate: { inputState in components.contains { $0(inputState) } })
+    public static func buildBlock(_ components: ((T) -> Bool)...) -> OneOf<T> {
+        OneOf(predicate: { input in components.contains { $0(input) } })
     }
 }
