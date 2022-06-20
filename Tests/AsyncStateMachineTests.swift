@@ -108,19 +108,19 @@ let stateMachine = StateMachine<State, Event, Output>(initial: State.s1(value: "
 }
 
 final class AsyncStatMachineSequenceTests: XCTestCase {
-  func testPerformance() async {
-    measure {
-      let exp = expectation(description: "task")
-      let task = Task {
-        for s in (1...12) {
-          for e in (1...12) {
-            _ = await stateMachine.reduce(when: State.s1(value: "s\(s)"), on: Event.e1(value: "e\(e)"))
-          }
-        }
-        exp.fulfill()
-      }
-      wait(for: [exp], timeout: 10.0)
-      task.cancel()
-    }
-  }
+//  func testPerformance() async {
+//    measure {
+//      let exp = expectation(description: "task")
+//      let task = Task {
+//        for s in (1...12) {
+//          for e in (1...12) {
+//            _ = await stateMachine.reduce(when: State.s1(value: "s\(s)"), on: Event.e1(value: "e\(e)"))
+//          }
+//        }
+//        exp.fulfill()
+//      }
+//      wait(for: [exp], timeout: 10.0)
+//      task.cancel()
+//    }
+//  }
 }

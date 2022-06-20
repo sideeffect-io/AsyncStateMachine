@@ -1,7 +1,7 @@
 public struct Guard {
     let predicate: Bool
     
-    public init(predicate: Bool) {
-        self.predicate = predicate
+    public init(predicate: @autoclosure () -> Bool) {
+        self.predicate = predicate()
     }
 }

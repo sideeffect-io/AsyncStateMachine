@@ -5,7 +5,7 @@ public struct RuntimeStrategy<S>: Sendable where S: DSLCompatible {
 
   public static func cancel(when state: S) -> RuntimeStrategy {
     RuntimeStrategy { input in
-      input.matches(case: state)
+      input.matches(state)
     }
   }
 
@@ -13,7 +13,7 @@ public struct RuntimeStrategy<S>: Sendable where S: DSLCompatible {
     when state: @escaping (StateAssociatedValue) -> S
   ) -> RuntimeStrategy {
     RuntimeStrategy { input in
-      input.matches(case: state)
+      input.matches(state)
     }
   }
 
@@ -120,7 +120,7 @@ where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
     strategy: RuntimeStrategy<S>? = nil
   ) -> Self {
     let predicate: @Sendable (O) -> Bool = { currentOutput in
-      currentOutput.matches(case: output)
+      currentOutput.matches(output)
     }
     let sideEffect: @Sendable (O) -> AnyAsyncSequence<E> = { _ in
       sideEffect()
@@ -163,10 +163,10 @@ where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
     strategy: RuntimeStrategy<S>? = nil
   ) -> Self {
     let predicate: @Sendable (O) -> Bool = { currentOutput in
-      currentOutput.matches(case: output)
+      currentOutput.matches(output)
     }
     let sideEffect: @Sendable (O) -> AnyAsyncSequence<E>? = { currentOutput in
-      if let outputAssociatedValue: OutputAssociatedValue = currentOutput.associatedValue() {
+      if let outputAssociatedValue = currentOutput.associatedValue(expecting: OutputAssociatedValue.self) {
         return sideEffect(outputAssociatedValue)
       }
 
@@ -274,7 +274,7 @@ where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
     send event: OtherE
   ) -> Self {
     return self.register(middleware: { (inputState: S) in
-      guard inputState.matches(case: state) else { return }
+      guard inputState.matches(state) else { return }
       await connector.ping(event)
     })
   }
@@ -322,7 +322,7 @@ where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
         }
       }
     }
-    await self.worksInProgress.register(id: UUID(), cancellationPredicate: { _ in  false }, task: task)
+    await self.worksInProgress.register(cancellationPredicate: { _ in  false }, task: task)
   }
 
   func handleSideEffect(
@@ -341,7 +341,6 @@ where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
       // execute new work for the output
       guard let work = self.computeWorkToPerform(for: output) else { return }
 
-      let taskId = UUID()
       let task: Task<Void, Never> = Task(priority: work.priority) {
         do {
           for try await event in work.events {
@@ -351,25 +350,16 @@ where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
       }
 
       // register the work in progress
+      var cancellationPredicate: (S) -> Bool = { _ in false } // no explicit cancellation by default
       if let strategy = work.strategy {
-        // explicit cancellation when current state matches the predicate
-        await self.worksInProgress.register(
-          id: taskId,
-          cancellationPredicate: strategy.predicate,
-          task: task
-        )
-      } else {
-        // no explicit cancellation
-        await self.worksInProgress.register(
-          id: taskId,
-          cancellationPredicate: { _ in false },
-          task: task
-        )
+        // explicit cancellation
+        cancellationPredicate = strategy.predicate
       }
 
-      // when task is finished, cleaning the work in progress
-      await task.value
-      await self.worksInProgress.unregister(id: taskId)
+      await self.worksInProgress.register(
+        cancellationPredicate: cancellationPredicate,
+        task: task
+      )
     }
   }
 
@@ -390,18 +380,21 @@ where S: DSLCompatible {
   var storage = [UUID: WorkInProgress]()
 
   func register(
-    id: UUID,
     cancellationPredicate: @escaping (S) -> Bool,
     task: Task<Void, Never>
   ) {
+    let id = UUID()
+
     self.storage[id] = WorkInProgress(
       cancellationPredicate: cancellationPredicate,
       task: task
     )
-  }
 
-  func unregister(id: UUID) {
-    self.storage[id] = nil
+    // unregistering when task is done
+    Task {
+      await task.value
+      self.storage[id] = nil
+    }
   }
 
   func cancelTasks(for state: S) {

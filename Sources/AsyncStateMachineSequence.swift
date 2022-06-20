@@ -52,7 +52,7 @@ where S: DSLCompatible & Sendable, E: DSLCompatible & Sendable, O: DSLCompatible
   ) async {
     await self.send(
       event,
-      resumeWhen: { inputState in inputState.matches(case: state) }
+      resumeWhen: { inputState in inputState.matches(state) }
     )
   }
 
@@ -62,7 +62,7 @@ where S: DSLCompatible & Sendable, E: DSLCompatible & Sendable, O: DSLCompatible
   ) async {
     await self.send(
       event,
-      resumeWhen: { inputState in inputState.matches(case: state) }
+      resumeWhen: { inputState in inputState.matches(state) }
     )
   }
 

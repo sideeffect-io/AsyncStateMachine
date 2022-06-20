@@ -18,7 +18,7 @@ where T: DSLCompatible {
         _ expression: T
     ) -> (T) -> Bool {
         { input in
-            input.matches(case: expression)
+            input.matches(expression)
         }
     }
     
@@ -26,7 +26,7 @@ where T: DSLCompatible {
         _ expression: @escaping (AssociatedValue) -> T
     ) -> (T) -> Bool {
         { input in
-            input.matches(case: expression)
+            input.matches(expression)
         }
     }
     
