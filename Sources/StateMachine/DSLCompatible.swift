@@ -1,3 +1,10 @@
+//
+//  DSLCompatible.swift
+//
+//
+//  Created by Thibault WITTEMBERG on 25/06/2022.
+//
+
 // insppired by https://github.com/gringoireDM/EnumKit
 import Foundation
 

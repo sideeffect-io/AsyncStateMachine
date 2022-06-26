@@ -22,7 +22,7 @@ final class ConnectorTests: XCTestCase {
     }
 
     // Given
-    let sut = Connector<Event>()
+    let sut = AsyncStateMachine.Pipe<Event>()
     sut.register(receiver: spyReceiver)
 
     // When
@@ -41,11 +41,11 @@ final class ConnectorTests: XCTestCase {
     }
 
     // Given
-    let sut = Connector<Event>()
+    let sut = AsyncStateMachine.Pipe<Event>()
     sut.register(receiver: spyReceiver)
 
     // When
-    await sut.ping(expectedEvent)
+    await sut.push(expectedEvent)
 
     // Then
     XCTAssertEqual(receivedEvent, expectedEvent)

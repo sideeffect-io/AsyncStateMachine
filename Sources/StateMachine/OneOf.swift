@@ -1,3 +1,10 @@
+//
+//  OneOf.swift
+//
+//
+//  Created by Thibault WITTEMBERG on 25/06/2022.
+//
+
 public struct OneOf<T>: Sendable
 where T: DSLCompatible {
     let predicate: @Sendable (T) -> Bool
