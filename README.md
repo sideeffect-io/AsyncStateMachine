@@ -1,43 +1,59 @@
 # Async State Machine
+
 **Async State Machine** aims to provide a way to structure an application thanks to state machines. The goal is to identify the states and the side effects involved in each feature and to model them in a consistent and scalable way.
 
+The DSL looks like this (see below for more details):
+
+```swift
+let stateMachine = StateMachine(initial: .state1) { 
+    When(state: .state1) { _ in
+        Execute(output: …)
+    } transitions: { persons in
+        On(event: …) { _ in Transition(to: .state2) }
+        On(event: …) { _ in Transition(to: .state3) }
+        On(event: …) { v in Transition(to: .state4(v)) }
+    }
+    
+    When(state: …) { … in
+        Execute.noOutput
+    } transitions: { _ in
+        …
+    }
+}
+```
+
 ## Key points:
-- Each feature is a Moore state machine: no need for a global store
+
+- Each feature is a [Moore state machine](https://en.wikipedia.org/wiki/Moore_machine): no need for a global store
 - State machines are declarative: a DSL offers a natural and concise syntax
-- Structured concurrency is at the core: a state machine is an AsyncSequence
-- Structured concurrency is at the core: side effects are ran inside tasks
-- Structured concurrency is at the core: concurrent transitions can suspend
+- Structured concurrency is at the core:
+   - A state machine is an AsyncSequence
+   - Side effects are ran inside tasks
+   - Concurrent transitions can suspend
 - State machines are built in complete isolation: tests dont require mocks
 - Dependencies are injected per side effect: no global bag of dependencies
 - State machines are not UI related: it works with UIKit or SwiftUI
 
-## State Machine
+## A Simple Example
+
 As a picture is worth a thousand words, here’s an example of a state machine that drives the opening of an elevator‘s door:
 
 ![](Elevator.jpeg)
 
-<br>
-How does it read? 
+### How does it read? 
 
----
-> **INITIALLY**, the elevator is *open* with 0 person inside
+- **INITIALLY**, the elevator is `open` with 0 person inside
+- **WHEN** the state is `open`, **ON** the event `personsHaveEntered`, the new state is `open` with `n + x` persons.
+- **WHEN** the state is `open`, **ON** the event `closeButtonWasPressed`, the new state is `closing` if there is less than 10 persons (elevator’s capacity is limited).
+- **WHEN** the state is `closing`, the `close` action is executed (the door can close at different speeds).
+- **WHEN** the state is `closing`, **ON** the event `doorHasLocked`, the new state is *closed*.
 
->**WHEN** the state is *open*, **ON** the event *personsHaveEntered*, the new state is *open* with ‘n + x’ persons.
+### What defines this state machine?
 
->**WHEN** the state is *open*, **ON** the event *closeButtonWasPressed*, the new state is *closing* if there is less than 10 persons (elevator’s capacity is limited).
-
->**WHEN** the state is *closing*, the *close* action is executed (the door can close at different speeds).
-
->**WHEN** the state is *closing*, **ON** the event *doorHasLocked*, the new state is *closed*.
-
----
-<br>
-What defines this state machine?
-
-- The elevator can be in 3 exclusive states: open, closing and closed. This is the finite set of possible states. The initial state of the elevator is open with 0 person inside.
-- The elevator can received 3 events: personsHaveEntered, closeButtonWasPressed and doorHasLocked. This is the finite set of possible events.
-- The elevator can perform 1 action: close the door when the state is closing and the number of persons is less than 10. The speed of the doors is determined by the number of persons inside. This is the finite set of possible outputs.
-- The elevator can go from one state to another when events are received. This is the finite set of possible transitions.
+- The elevator can be in 3 exclusive **states**: `open`, `closing` and `closed`. _This is the finite set of possible **states**. The initial state of the elevator is `open` with 0 person inside._
+- The elevator can received 3 **events**: `personsHaveEntered`, `closeButtonWasPressed` and `doorHasLocked`. _This is the finite set of possible **events**._
+- The elevator can perform 1 **action**: `close` the door when the state is `closing` and the number of persons is less than 10. The speed of the doors is determined by the number of persons inside. _This is the finite set of possible **outputs**._
+- The elevator can go from one state to another when events are received. _This is the finite set of possible **transitions**._
 
 The assumption we make is that almost any feature can be described in terms of state machines. And to make it as simple as possible, we use a Domain Specific Language.
 
@@ -93,7 +109,8 @@ The only requirement to be able to use enums with the DSL is to have them confor
 
 The DSL aims to describe a formal state machine: no side effects, only pure functions!
 
-Side effects are declared in the *Runtime* where one can map outputs to side effect functions:
+Instead, the `StateMachine` declares **output** _values_ to describe the _intent_ of side effects to be performed, but the _implementation_ of those side effects are declared in the `Runtime` where one can map outputs to side effect functions.
+(Amongst other benefits, this decoupling allows for easier testing of your State Machine without depending on the implementation of the side effects.)
 
 ```swift
 func close(speed: Int) async -> Event {
@@ -105,9 +122,9 @@ let runtime = Runtime<State, Event, Output>()
     .map(output: Output.close(speed:), to: close(speed:))
 ```
 
-> Side effects are functions that returns either an AsyncSequence of events or a single event. Every time the state machine produces the expected output, the corresponding side effect will be executed.
+Side effects are functions that return either an `AsyncSequence` of events, or a single event. Every time the state machine produces the expected `output`, the corresponding side effect will be executed.
 
-The Runtime can register middleware functions executed on any states or events:
+In addition, the Runtime can register _middleware_ functions executed on any `state` or `event`:
 
 ```swift
 let runtime = Runtime<State, Event, Output>()
@@ -116,12 +133,12 @@ let runtime = Runtime<State, Event, Output>()
     .register(middleware: { (event: Event) in print("Event: \(event)") })
 ```
 
-The *AsyncStateMachineSequence* can then be instantiated:
+The `AsyncStateMachineSequence` can then be instantiated:
 
 ```swift
 let sequence = AsyncStateMachineSequence(
-	stateMachine: stateMachine,
-	runtime: runtime
+    stateMachine: stateMachine,
+    runtime: runtime
 )
 
 for await state in sequence { … }
@@ -135,65 +152,65 @@ await sequence.send(Event.personsHaveEntered(persons: 3))
 
 ### Transitions
 
-- Transitions defined in the DSL are async functions, they will be executed in a non blocking way.
-- Event sending is async: `sequence.send(Event.closeButtonWasPressed)` will suspend until the event can be consumed. If an event previously sent is being processed by a transition, the next call to `send(_:)` will await. This prevents concurrent transitions to happen simultaneously which could lead to inconsistent states.
+- Transitions defined in the DSL are `async` functions; they will be executed in a non blocking way.
+- Event sending is `async`: `sequence.send(Event.closeButtonWasPressed)` will suspend until the event can be consumed. If an event previously sent is being processed by a transition, the next call to `send(_:)` will `await`. This prevents concurrent transitions to happen simultaneously (which could otherwise lead to inconsistent states).
 
 ### Side effects
 
-- Side effects are async functions executed in the context of Tasks.
+- Side effects are `async` functions executed in the context of `Tasks`.
 - Task priority can be set in the Runtime: `.map(output: Output.close(speed:), to: close(speed:), priority: .high)`.
-- Collaborative task cancellation applies: when the sequence Task is cancelled, every side effect tasks will be cancelled.
+- Collaborative task cancellation applies: when the sequence `Task` is cancelled, every side effect tasks will be cancelled.
 
 ### Async sequence
 
-- *AsyncStateMachineSequence* benefits from all the operators associated to *AsyncSequence* (`map`, `filter`, …). (See also [swift async algorithms](https://github.com/apple/swift-async-algorithms))
+- `AsyncStateMachineSequence` benefits from all the operators associated to `AsyncSequence` (`map`, `filter`, …). (See also [swift async algorithms](https://github.com/apple/swift-async-algorithms))
 
 ## How to inject dependencies?
 
-Most of the time, side effects will require dependencies to perform their duty. However, **Async State Machine** expects a side effect to be a function that eventually takes a parameter (from the output) and returns an Event or an AsyncSequence of events. There is no place for dependencies in their signatures.
+Most of the time, side effects will require dependencies to perform their duty. However, **Async State Machine** expects a side effect to be a function that eventually takes a parameter (from the `Output`) and returns an `Event` or an `AsyncSequence<Event>`. There is no place for dependencies in their signatures.
 
 There are several ways to overcome this:
 
-- Make a business object that captures the dependencies and declares a function that matches the side effect’s signature:
+- Make a business object that captures the dependencies, and declares a function that matches the side effect’s signature:
 
 ```swift
 class ElevatorUseCase {
-	let engine: Engine
+    let engine: Engine
 	
-	init(engine: Engine) { self.engine = engine }
+    init(engine: Engine) { self.engine = engine }
 
-	func close(speed: Int) async -> Event {
-		try? await Task.sleep(nanoseconds: UInt64(self.engine.delay / speed))
-		return .doorHasLocked
-	}
+    func close(speed: Int) async -> Event {
+        try? await Task.sleep(nanoseconds: UInt64(self.engine.delay / speed))
+        return .doorHasLocked
+    }
 }
 
 let useCase = ElevatorUseCase(engine: FastEngine())
 let runtime = Runtime<State, Event, Output>()
-	.map(output: Output.close(speed:), to: useCase.close(speed:))
+    .map(output: Output.close(speed:), to: useCase.close(speed:))
 ```
 
 - Make a factory function that provides a side effect, capturing its dependencies:
 
 ```swift
 func makeClose(engine: Engine) -> (Int) async -> Event {
-	return { (speed: Int) in
-		try? await Task.sleep(nanoseconds: UInt64(engine.delay / speed))
-		return .doorHasLocked
-	}
+    return { (speed: Int) in
+        try? await Task.sleep(nanoseconds: UInt64(engine.delay / speed))
+        return .doorHasLocked
+    }
 }
 
 let close = makeClose(engine: FastEngine())
 let runtime = Runtime<State, Event, Output>()
-	.map(output: Output.close(speed:), to: close)
+    .map(output: Output.close(speed:), to: close)
 ```
 
-- Use the provided `inject` function (preferred way verbosity wise):
+- Use the provided `inject` function (preferred way verbosity-wise):
 
 ```swift
 func close(speed: Int, engine: Engine) async -> Event {
-	try? await Task.sleep(nanoseconds: UInt64(engine.delay / speed))
-	return .doorHasLocked
+    try? await Task.sleep(nanoseconds: UInt64(engine.delay / speed))
+    return .doorHasLocked
 }
 
 let closeSideEffect = inject(dep: Engine(), in: close(speed:engine:))
@@ -207,32 +224,32 @@ State machine definitions do not depend on any dependencies, thus they can be te
 
 ```swift
 XCTStateMachine(stateMachine)
-	.assertNoOutput(when: .open(persons: 0))
-	.assert(
-		when: .open(persons: 0),
-		on: .personsHaveEntered(persons: 1),
-		transitionTo: .open(persons: 1)
-	)
-	.assert(
-		when: .open(persons: 5),
-		on: .closeButtonWasPressed,
-		transitionTo: .closing(persons: 5)
-	)
-	.assertNoTransition(when: .open(persons: 15), on: .closeButtonWasPressed)
-	.assert(when: .closing(persons: 1), execute: .close(speed: 2))
-	.assert(
-		when: .closing(persons: 1),
-		on: .doorHasLocked,
-		transitionTo: .closed
-	)
-	.assertNoOutput(when: .closed)
+    .assertNoOutput(when: .open(persons: 0))
+    .assert(
+        when: .open(persons: 0),
+        on: .personsHaveEntered(persons: 1),
+        transitionTo: .open(persons: 1)
+    )
+    .assert(
+        when: .open(persons: 5),
+        on: .closeButtonWasPressed,
+        transitionTo: .closing(persons: 5)
+    )
+    .assertNoTransition(when: .open(persons: 15), on: .closeButtonWasPressed)
+    .assert(when: .closing(persons: 1), execute: .close(speed: 2))
+    .assert(
+        when: .closing(persons: 1),
+        on: .doorHasLocked,
+        transitionTo: .closed
+    )
+    .assertNoOutput(when: .closed)
 ```
 
 ## Using Async State Machine with SwiftUI and UIKit
 
 No matter the UI framework you use, rendering a user interface is about interpreting a state. You can use an *AsyncStateMachineSequence* as a reliable state factory.
 
-A simple and naïve SwiftUI usage could be:
+A simple and naive SwiftUI usage could be:
 
 ```swift
 struct ContentView: View {
@@ -244,18 +261,14 @@ struct ContentView: View {
             Text(self.state.description)
             Button { 
                 Task {
-                    await self.sequence.send(
-	                    Event.personsHaveEntered(persons: 1)
-                    )
+                    await self.sequence.send(Event.personsHaveEntered(persons: 1))
                 }
             } label: { 
                 Text("New person")
             }
             Button { 
                 Task {
-                    await self.sequence.send(
-	                    Event.closeButtonWasPressed
-	                )
+                    await self.sequence.send(Event.closeButtonWasPressed)
                 }
             } label: { 
                 Text("Close the door")
@@ -271,80 +284,82 @@ struct ContentView: View {
 …
 
 ContentView(
-	state: stateMachine.initial,
-	sequence: sequence
+    state: stateMachine.initial,
+    sequence: sequence
 )
 ```
 
-One could wrap up an *AsyncStateMachineSequence* inside a generic `@MainActor class ViewState: ObservableObject` that would expose a `@Published var state: State` and handle the sequence iteration. That would simplify the state management inside the SwiftUI views.
+One could wrap up an `AsyncStateMachineSequence` inside a generic `@MainActor class ViewState: ObservableObject` that would expose a `@Published var state: State` and handle the sequence iteration. That would simplify the state management inside the SwiftUI views.
 
-With UIKit, a simple and naïve approach would be:
+With UIKit, a simple and naive approach would be:
 
 ```swift
 let task: Task<Void, Never>!
 let sequence: AsyncStateMachineSequence<State, Event, Output>!
 
 override func viewDidLoad() {
-	super.viewDidLoad()
-	self.task = Task {
-		for await state in self.sequence {
-			self.render(state: state)
-		}
-	}
+    super.viewDidLoad()
+    self.task = Task {
+        for await state in self.sequence {
+            self.render(state: state)
+        }
+    }
 }
 
 @MainActor func render(state: State) {
-	…
+    …
 }
 
 func deinit() {
-	self.task.cancel()
+    self.task.cancel()
 }
 ```
 
 ## Extras
 
-- Conditionally resumable `send()` function: 
-
-```swift
-await sequence.send(
-	.closeButtonWasPressed,
-	resumeWhen: .closed
-)`
-```
+### Conditionally resumable `send()` function: 
 
 Allows to send an event while awaiting for a specific state or set of states to resume.
 
-- Side effect cancellation:
+```swift
+await sequence.send(
+    .closeButtonWasPressed,
+    resumeWhen: .closed
+)`
+```
+
+### Side effect cancellation
+
+Make `close(speed:)` side effect execution be cancelled when the state machine produces any new states. It is also possible to cancel on a specific state.
 
 ```swift 
 Runtime.map(
-	output: Output.close(speed:),
-	to: close(speed:),
-	strategy: .cancelWhenAnyState
+    output: Output.close(speed:),
+    to: close(speed:),
+    strategy: .cancelWhenAnyState
 )
 ```
 
-The `close(speed:)` side effect execution will be cancelled when the state machine produces any new states. It is also possible to cancel on a specific state.
+### States set
 
-- States set:
+Allows to factorize the same transition for a set of states.
 
 ```swift
 When(states: OneOf {
-	State.closing(persons:),
-	State.closed
+    State.closing(persons:),
+    State.closed
 }) { _ in
-	Execute.noOutput
+    Execute.noOutput
 } transitions: {
-	On(event: Event.closeButtonWasPressed) { _ in
-		Transition(to: State.opening)
-	}
-}`
+    On(event: Event.closeButtonWasPressed) { _ in
+        Transition(to: State.opening)
+    }
+}
 ```
 
-It allows to factorize the same transition for a set of states.
+### SwiftUI bindings
 
-- SwiftUI bindings:
+Allows to create a SwiftUI binding on any value, sending an Event when the binding changes.
 
 ```swift
 self.sequence.binding(
@@ -353,9 +368,9 @@ self.sequence.binding(
 )
 ```
 
-Allows to create a SwiftUI binding on any value, sending an Event when the binding changes.
+### Connecting two state machines
 
-- Connecting two state machines:
+This will send the event `OtherEvent.refresh` in the other state machine when the first state machine's state is `State.closed`.
 
 ```swift
 let connector = Connector<OtherEvent>()
@@ -370,4 +385,3 @@ let otherRuntime = Runtime<OtherState, OtherEvent, OtherOutput>()
 	.connectAsReceiver(to: connector)
 ```
 
-It will send the event `OtherEvent.refresh` in the other state machine when the first state machine's state is `State.closed`.
