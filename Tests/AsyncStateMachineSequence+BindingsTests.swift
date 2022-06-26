@@ -22,13 +22,13 @@ final class AsyncStateMachineSequence_Bindings: XCTestCase {
 
   func testBinding_returns_binding_that_sends_event_when_passing_event() {
     let eventWasReceived = expectation(description: "Event was received")
-    var receivedEvent: Event?
+    let receivedEvent = ManagedCriticalState<Event?>(nil)
     let expectedEvent = Event.e1
 
     let stateMachine = StateMachine<State, Event, Never>(initial: State.s1) {}
     let runtime = Runtime<State, Event, Never>()
       .register(middleware: { (event: Event) in
-        receivedEvent = event
+        receivedEvent.apply(criticalState: event)
         eventWasReceived.fulfill()
       })
 
@@ -49,20 +49,20 @@ final class AsyncStateMachineSequence_Bindings: XCTestCase {
     wait(for: [eventWasReceived], timeout: 1.0)
 
     // Then
-    XCTAssertEqual(receivedEvent, expectedEvent)
+    XCTAssertEqual(receivedEvent.criticalState, expectedEvent)
   }
 
   func testBinding_returns_binding_that_receives_state_and_sends_event_when_passing_event_closure() {
     let eventWasReceived = expectation(description: "Event was received")
     var receivedState: State?
     let expectedState = State.s2
-    var receivedEvent: Event?
+    let receivedEvent = ManagedCriticalState<Event?>(nil)
     let expectedEvent = Event.e1
 
     let stateMachine = StateMachine<State, Event, Never>(initial: State.s1) {}
     let runtime = Runtime<State, Event, Never>()
       .register(middleware: { (event: Event) in
-        receivedEvent = event
+        receivedEvent.apply(criticalState: event)
         eventWasReceived.fulfill()
       })
 
@@ -87,7 +87,7 @@ final class AsyncStateMachineSequence_Bindings: XCTestCase {
 
     // Then
     XCTAssertEqual(receivedState, expectedState)
-    XCTAssertEqual(receivedEvent, expectedEvent)
+    XCTAssertEqual(receivedEvent.criticalState, expectedEvent)
   }
 }
 #endif

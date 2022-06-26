@@ -1,3 +1,10 @@
+//
+//  AnyAsyncSequence.swift
+//
+//
+//  Created by Thibault WITTEMBERG on 25/06/2022.
+//
+
 public extension AsyncSequence {
     /// Type erase the AsyncSequence into an AnyAsyncSequence.
     /// - Returns: A type erased AsyncSequence.

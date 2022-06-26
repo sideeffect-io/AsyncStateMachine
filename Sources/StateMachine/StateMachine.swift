@@ -1,24 +1,31 @@
+//
+//  StateMachine.swift
+//
+//
+//  Created by Thibault WITTEMBERG on 25/06/2022.
+//
+
 public struct StateMachine<S, E, O>: Sendable
 where S: DSLCompatible & Sendable, E: DSLCompatible, O: DSLCompatible {
-  public let initial: S
+  let initial: S
   let whenStates: [When<S, E, O>]
   
   public init(
     initial: S,
-    @StatesBuilder<S, E, O> whenStates: () -> [When<S, E, O>]
+    @WhensBuilder<S, E, O> whenStates: () -> [When<S, E, O>]
   ) {
     self.initial = initial
     self.whenStates = whenStates()
   }
-  
-  func output(when state: S) -> O? {
+
+  @Sendable func output(for state: S) -> O? {
     self
       .whenStates
       .first { $0.predicate(state) }?
       .output(state)
   }
-  
-  func reduce(when state: S, on event: E) async -> S? {
+
+  @Sendable func reduce(when state: S, on event: E) async -> S? {
     await self
       .whenStates
       .filter { $0.predicate(state) }
@@ -29,7 +36,7 @@ where S: DSLCompatible & Sendable, E: DSLCompatible, O: DSLCompatible {
 }
 
 @resultBuilder
-public enum StatesBuilder<S, E, O>
+public enum WhensBuilder<S, E, O>
 where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
   public static func buildExpression(
     _ expression: When<S, E, O>

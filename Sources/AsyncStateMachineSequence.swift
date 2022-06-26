@@ -5,43 +5,34 @@ where S: DSLCompatible & Sendable, E: DSLCompatible & Sendable, O: DSLCompatible
   public typealias Element = S
   public typealias AsyncIterator = Iterator
 
-  public let stateMachine: StateMachine<S, E, O>
-  let runtime: Runtime<S, E, O>
-  let channel: AsyncChannel<E>
+  let executor: Executor<S, E, O>
 
   public init(
     stateMachine: StateMachine<S, E, O>,
     runtime: Runtime<S, E, O>
   ) {
-    self.stateMachine = stateMachine
-    self.runtime = runtime
-    self.channel = AsyncChannel()
-    self.runtime.register(
-      eventEntryPoint: { [weak channel] event in await channel?.send(event) }
-    )
+    self.executor = Executor(stateMachine: stateMachine, runtime: runtime)
   }
 
   public func send(_ event: E) async {
-    await self.channel.send(event)
+    await self.executor.sendEvent(event)
   }
 
   public func send(
     _ event: E,
     resumeWhen predicate: @escaping (S) -> Bool
   ) async {
-    await withUnsafeContinuation { [weak self] (continuation: UnsafeContinuation<Void, Never>) in
-      guard let self = self else {
-        continuation.resume()
-        return
-      }
-      let id: UUID = self.runtime.register(middleware: { (state: S) in
-        if predicate(state) {
-          self.runtime.unregisterStateMiddleware(id: id)
-          continuation.resume()
-        }
-      })
+    await withUnsafeContinuation { [executor] (continuation: UnsafeContinuation<Void, Never>) in
       Task {
-        await self.send(event)
+        await executor.register(temporaryMiddleware: { state in
+          if predicate(state) {
+            continuation.resume()
+            return true
+          }
+          return false
+        })
+
+        await executor.sendEvent(event)
       }
     }
   }
@@ -76,64 +67,47 @@ where S: DSLCompatible & Sendable, E: DSLCompatible & Sendable, O: DSLCompatible
     )
   }
 
-  deinit {
-    self.runtime.cancelWorksInProgress()
-  }
-
   public func makeAsyncIterator() -> Iterator {
-    Iterator(asyncStateMachineSequence: self)
+    Iterator(executor: self.executor)
   }
 
   public struct Iterator: AsyncIteratorProtocol {
     var currentState: S?
-    var channelIterator: AsyncChannel<E>.AsyncIterator
+    let executor: Executor<S, E, O>
 
-    let asyncStateMachineSequence: AsyncStateMachineSequence<S, E, O>
-
-    public init(
-      asyncStateMachineSequence: AsyncStateMachineSequence<S, E, O>
-    ) {
-      self.asyncStateMachineSequence = asyncStateMachineSequence
-      self.channelIterator = self
-        .asyncStateMachineSequence
-        .channel
-        .makeAsyncIterator()
+    init(executor: Executor<S, E, O>) {
+      self.executor = executor
     }
 
     mutating func setCurrentState(_ state: S) async {
       self.currentState = state
-      await self.asyncStateMachineSequence.runtime.executeStateMiddlewares(for: state)
-      let output = self.asyncStateMachineSequence.stateMachine.output(when: state)
-      self.asyncStateMachineSequence.runtime.handleSideEffect(
-        state: state,
-        output: output,
-        handleEvent: self.asyncStateMachineSequence.send)
+      await self.executor.process(state: state)
     }
 
     public mutating func next() async -> Element? {
-      let stateMachine = self.asyncStateMachineSequence.stateMachine
-      let runtime = self.asyncStateMachineSequence.runtime
+      let executor = self.executor
 
       return await withTaskCancellationHandler {
         guard let currentState = self.currentState else {
           // early returning the initial state for first iteration
-          await self.setCurrentState(stateMachine.initial)
+          let initialState = self.executor.resolveInitialState()
+          await self.setCurrentState(initialState)
           return self.currentState
         }
 
         var nextState: S?
         while nextState == nil {
           // requesting the next event
-          guard let event = await self.channelIterator.next() else {
+          guard let event = await self.executor.getEvent() else {
             // should not happen since no one can finish the channel
             return nil
           }
 
           // executing middlewares for the event
-          await runtime.executeEventMiddlewares(for: event)
+          await self.executor.process(event: event)
 
           // looking for the next non nil state according to transitions
-          nextState = await stateMachine.reduce(when: currentState, on: event)
+          nextState = await self.executor.computeNextState(currentState, event)
         }
 
         guard let nextState = nextState else {
@@ -144,7 +118,9 @@ where S: DSLCompatible & Sendable, E: DSLCompatible & Sendable, O: DSLCompatible
         await self.setCurrentState(nextState)
         return nextState
       } onCancel: {
-        runtime.cancelWorksInProgress()
+        Task {
+          await executor.cancelTasksInProgress()
+        }
       }
     }
   }
