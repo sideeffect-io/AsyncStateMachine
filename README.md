@@ -122,7 +122,7 @@ let runtime = Runtime<State, Event, Output>()
     .map(output: Output.close(speed:), to: close(speed:))
 ```
 
-Side effects are functions that return either an `AsyncSequence` of events, or a single event. Every time the state machine produces the expected `output`, the corresponding side effect will be executed.
+Side effects are `async` functions that return either a single `Event`, or an `AsyncSequence<Event>`. Every time the state machine produces the expected `output`, the corresponding side effect will be executed.
 
 In addition, the Runtime can register _middleware_ functions executed on any `state` or `event`:
 
