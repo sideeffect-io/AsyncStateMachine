@@ -28,7 +28,7 @@ let stateMachine = StateMachine(initial: .state1) {
 - State machines are declarative: a DSL offers a natural and concise syntax
 - Structured concurrency is at the core:
    - A state machine is an `AsyncSequence`
-   - Side effects are ran inside tasks
+   - Each side effect is run inside a `Task`
    - Concurrent transitions can suspend
 - State machines are built in complete isolation: tests dont require mocks
 - Dependencies are injected per side effect: no global bag of dependencies
