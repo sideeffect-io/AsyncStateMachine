@@ -27,7 +27,7 @@ let stateMachine = StateMachine(initial: .state1) {
 - Each feature is a [Moore state machine](https://en.wikipedia.org/wiki/Moore_machine): no need for a global store
 - State machines are declarative: a DSL offers a natural and concise syntax
 - Structured concurrency is at the core:
-   - A state machine is an AsyncSequence
+   - A state machine is an `AsyncSequence`
    - Side effects are ran inside tasks
    - Concurrent transitions can suspend
 - State machines are built in complete isolation: tests dont require mocks
