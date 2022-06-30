@@ -1,5 +1,5 @@
 //
-//  ConnectorTests.swift
+//  PipeTests.swift
 //
 //
 //  Created by Thibault WITTEMBERG on 20/06/2022.
@@ -8,12 +8,12 @@
 @testable import AsyncStateMachine
 import XCTest
 
-final class ConnectorTests: XCTestCase {
+final class PipeTests: XCTestCase {
   enum Event: DSLCompatible, Equatable {
     case e1
   }
 
-  func testRegister_sets_the_receiver() async {
+  func test_register_sets_the_receiver() async {
     let expectedEvent = Event.e1
     var receivedEvent: Event?
 
@@ -32,7 +32,7 @@ final class ConnectorTests: XCTestCase {
     XCTAssertEqual(receivedEvent, expectedEvent)
   }
 
-  func testPing_calls_the_receiver() async {
+  func test_ping_calls_the_receiver() async {
     let expectedEvent = Event.e1
     var receivedEvent: Event?
 

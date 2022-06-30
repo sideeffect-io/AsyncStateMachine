@@ -45,4 +45,8 @@ struct OrderedStorage<Value> {
       .indexedValues
       .map { $0.value }
   }
+
+  var count: Int {
+    self.storage.count
+  }
 }

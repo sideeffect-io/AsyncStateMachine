@@ -9,7 +9,8 @@
 @testable import AsyncStateMachine
 import XCTest
 
-final class AsyncStateMachineSequence_Bindings: XCTestCase {
+@MainActor
+final class ViewStateTests: XCTestCase {
 
   enum State: DSLCompatible, Equatable {
     case s1
@@ -20,7 +21,7 @@ final class AsyncStateMachineSequence_Bindings: XCTestCase {
     case e1
   }
 
-  func testBinding_returns_binding_that_sends_event_when_passing_event() {
+  func test_binding_returns_binding_that_sends_event_when_passing_event() {
     let eventWasReceived = expectation(description: "Event was received")
     let receivedEvent = ManagedCriticalState<Event?>(nil)
     let expectedEvent = Event.e1
@@ -32,14 +33,15 @@ final class AsyncStateMachineSequence_Bindings: XCTestCase {
         eventWasReceived.fulfill()
       })
 
-    let sut = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
+    let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
+    let sut = ViewState(sequence)
 
     Task {
-      for await _ in sut {}
+      await sut.start()
     }
 
     // Given
-    let received = sut.binding(get: State.s1, send: expectedEvent)
+    let received = sut.binding(send: expectedEvent)
 
     XCTAssertEqual(received.wrappedValue, State.s1)
 
@@ -52,7 +54,7 @@ final class AsyncStateMachineSequence_Bindings: XCTestCase {
     XCTAssertEqual(receivedEvent.criticalState, expectedEvent)
   }
 
-  func testBinding_returns_binding_that_receives_state_and_sends_event_when_passing_event_closure() {
+  func test_binding_returns_binding_that_receives_state_and_sends_event_when_passing_event_closure() {
     let eventWasReceived = expectation(description: "Event was received")
     var receivedState: State?
     let expectedState = State.s2
@@ -66,14 +68,15 @@ final class AsyncStateMachineSequence_Bindings: XCTestCase {
         eventWasReceived.fulfill()
       })
 
-    let sut = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
+    let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
+    let sut = ViewState(sequence)
 
     Task {
-      for await _ in sut {}
+      await sut.start()
     }
 
     // Given
-    let received = sut.binding(get: State.s1, send: { state in
+    let received = sut.binding(send: { state in
       receivedState = state
       return expectedEvent
     })

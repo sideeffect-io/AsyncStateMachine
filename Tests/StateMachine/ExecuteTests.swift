@@ -13,13 +13,13 @@ final class ExecuteTests: XCTestCase {
     case o1
   }
 
-  func testInit_sets_output() {
+  func test_init_sets_output() {
     let sut = Execute(output: Output.o1)
 
     XCTAssertEqual(sut.output, .o1)
   }
 
-  func testNoOutput_sets_nil_output() {
+  func test_noOutput_sets_nil_output() {
     let sut = Execute<Output>.noOutput
 
     XCTAssertNil(sut.output)

@@ -56,12 +56,12 @@ final class StateMachineTests: XCTestCase {
     }
   }
 
-  func testInit_sets_initial() {
+  func test_init_sets_initial() {
     let receivedInitial = sut.initial
     XCTAssertEqual(receivedInitial, State.s1)
   }
 
-  func testOutput_returns_non_nil_when_called_with_expected_state() {
+  func test_output_returns_non_nil_when_called_with_expected_state() {
     var receivedOutput = sut.output(for: State.s1)
     XCTAssertEqual(receivedOutput, Output.o1)
 
@@ -69,12 +69,12 @@ final class StateMachineTests: XCTestCase {
     XCTAssertEqual(receivedOutput, Output.o2)
   }
 
-  func testOutput_returns_nil_when_called_with_unexpected_state() {
+  func test_output_returns_nil_when_called_with_unexpected_state() {
     let receivedOutput = sut.output(for: State.s3)
     XCTAssertNil(receivedOutput)
   }
 
-  func testReducer_returns_non_nil_when_called_with_expected_state_and_event() async {
+  func test_reducer_returns_non_nil_when_called_with_expected_state_and_event() async {
     var receivedState = await sut.reduce(when: State.s1, on: Event.e1)
     XCTAssertEqual(receivedState, State.s2(value: "2"))
 

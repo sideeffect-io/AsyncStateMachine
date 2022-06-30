@@ -13,7 +13,7 @@ final class TransitionTests: XCTestCase {
     case s1
   }
 
-  func testInit_sets_state() {
+  func test_init_sets_state() {
     let sut = Transition(to: State.s1)
 
     XCTAssertEqual(sut.state, State.s1)

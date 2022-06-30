@@ -6,65 +6,18 @@ where S: DSLCompatible & Sendable, E: DSLCompatible & Sendable, O: DSLCompatible
   public typealias AsyncIterator = Iterator
 
   let executor: Executor<S, E, O>
+  let initialState: S
 
   public init(
     stateMachine: StateMachine<S, E, O>,
     runtime: Runtime<S, E, O>
   ) {
     self.executor = Executor(stateMachine: stateMachine, runtime: runtime)
+    self.initialState = stateMachine.initial
   }
 
   public func send(_ event: E) async {
     await self.executor.sendEvent(event)
-  }
-
-  public func send(
-    _ event: E,
-    resumeWhen predicate: @escaping (S) -> Bool
-  ) async {
-    await withUnsafeContinuation { [executor] (continuation: UnsafeContinuation<Void, Never>) in
-      Task {
-        await executor.register(temporaryMiddleware: { state in
-          if predicate(state) {
-            continuation.resume()
-            return true
-          }
-          return false
-        })
-
-        await executor.sendEvent(event)
-      }
-    }
-  }
-
-  public func send(
-    _ event: E,
-    resumeWhen state: S
-  ) async {
-    await self.send(
-      event,
-      resumeWhen: { inputState in inputState.matches(state) }
-    )
-  }
-
-  public func send<StateAssociatedValue>(
-    _ event: E,
-    resumeWhen state: @escaping (StateAssociatedValue) -> S
-  ) async {
-    await self.send(
-      event,
-      resumeWhen: { inputState in inputState.matches(state) }
-    )
-  }
-
-  public func send(
-    _ event: E,
-    resumeWhen states: OneOf<S>
-  ) async {
-    await self.send(
-      event,
-      resumeWhen: { inputState in states.predicate(inputState) }
-    )
   }
 
   public func makeAsyncIterator() -> Iterator {

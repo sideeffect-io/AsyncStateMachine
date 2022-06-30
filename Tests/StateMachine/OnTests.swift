@@ -19,7 +19,7 @@ final class OnTests: XCTestCase {
     case e3(value: String)
   }
 
-  func testInit_sets_predicate_and_transition_when_passing_event_and_transition() async {
+  func test_init_sets_predicate_and_transition_when_passing_event_and_transition() async {
     let receivedEvent = ManagedCriticalState<Event?>(nil)
 
     let expectedEvent = Event.e1
@@ -46,7 +46,7 @@ final class OnTests: XCTestCase {
     XCTAssertEqual(receivedState, expectedState)
   }
 
-  func testInit_sets_predicate_and_transition_when_passing_event_guard_and_transition() async {
+  func test_init_sets_predicate_and_transition_when_passing_event_guard_and_transition() async {
     let receivedEventInGuard = ManagedCriticalState<Event?>(nil)
     let receivedEventInTransition = ManagedCriticalState<Event?>(nil)
 
@@ -83,7 +83,7 @@ final class OnTests: XCTestCase {
     XCTAssertEqual(receivedState, expectedState)
   }
 
-  func testInit_sets_predicate_and_transition_when_passing_event_with_associated_type_and_transition() async {
+  func test_init_sets_predicate_and_transition_when_passing_event_with_associated_type_and_transition() async {
     let receivedValue = ManagedCriticalState<String?>(nil)
 
     let expectedValue = "value"
@@ -113,7 +113,7 @@ final class OnTests: XCTestCase {
     XCTAssertNil(receivedState)
   }
 
-  func testInit_sets_predicate_and_transition_when_passing_event_with_associated_type_guard_and_transition() async {
+  func test_init_sets_predicate_and_transition_when_passing_event_with_associated_type_guard_and_transition() async {
     let receivedValueInGuard = ManagedCriticalState<String?>(nil)
     let receivedValueInTransition = ManagedCriticalState<String?>(nil)
 
@@ -155,7 +155,7 @@ final class OnTests: XCTestCase {
     XCTAssertFalse(sut.predicate(expectedEvent))
   }
 
-  func testInit_sets_predicate_and_transition_when_passing_oneOf_and_transition() async {
+  func test_init_sets_predicate_and_transition_when_passing_oneOf_and_transition() async {
     let receivedEvent = ManagedCriticalState<Event?>(nil)
 
     let expectedEvent1 = Event.e1
@@ -194,7 +194,7 @@ final class OnTests: XCTestCase {
     XCTAssertFalse(sut.predicate(unexpectedEvent))
   }
 
-  func testInit_sets_predicate_and_transition_when_passing_oneOf_guard_and_transition() async {
+  func test_init_sets_predicate_and_transition_when_passing_oneOf_guard_and_transition() async {
     let receivedEventInGuard = ManagedCriticalState<Event?>(nil)
     let receivedEventInTransition = ManagedCriticalState<Event?>(nil)
 

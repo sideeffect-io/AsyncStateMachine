@@ -1,5 +1,5 @@
 //
-//  RuntimeStrategy.swift
+//  Runtime.swift
 //
 //
 //  Created by Thibault WITTEMBERG on 25/06/2022.
@@ -16,12 +16,12 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
   public init() {}
 
   @discardableResult
-  public func map(
+  public func map<AS: AsyncSequence>(
     output: O,
-    to sideEffect: @escaping () -> AnyAsyncSequence<E>,
+    to sideEffect: @Sendable @escaping () -> AS,
     priority: TaskPriority? = nil,
     strategy: ExecutionStrategy<S> = .continueWhenAnyState
-  ) -> Self {
+  ) -> Self where AS.Element == E {
     var mutableSelf = self
 
     let predicate: @Sendable (O) -> Bool = { currentOutput in
@@ -29,7 +29,7 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
     }
 
     let sideEffect: @Sendable (O) -> AnyAsyncSequence<E> = { _ in
-      sideEffect()
+      sideEffect().eraseToAnyAsyncSequence()
     }
 
     mutableSelf.sideEffects.append(
@@ -47,11 +47,11 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
   @discardableResult
   public func map(
     output: O,
-    to sideEffect: @escaping () async -> E?,
+    to sideEffect: @Sendable @escaping () async -> E?,
     priority: TaskPriority? = nil,
     strategy: ExecutionStrategy<S> = .continueWhenAnyState
   ) -> Self {
-    let sideEffect: () -> AnyAsyncSequence<E> = {
+    let sideEffect: @Sendable () -> AnyAsyncSequence<E> = {
       AsyncJustSequence(sideEffect)
         .eraseToAnyAsyncSequence()
     }
@@ -65,12 +65,12 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
   }
 
   @discardableResult
-  public func map<OutputAssociatedValue>(
+  public func map<OutputAssociatedValue, AS: AsyncSequence>(
     output: @escaping (OutputAssociatedValue) -> O,
-    to sideEffect: @escaping (OutputAssociatedValue) -> AnyAsyncSequence<E>,
+    to sideEffect: @Sendable @escaping (OutputAssociatedValue) -> AS,
     priority: TaskPriority? = nil,
     strategy: ExecutionStrategy<S> = .continueWhenAnyState
-  ) -> Self {
+  ) -> Self where AS.Element == E {
     var mutableSelf = self
 
     let predicate: @Sendable (O) -> Bool = { currentOutput in
@@ -79,7 +79,7 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
     
     let sideEffect: @Sendable (O) -> AnyAsyncSequence<E>? = { currentOutput in
       if let outputAssociatedValue = currentOutput.associatedValue(expecting: OutputAssociatedValue.self) {
-        return sideEffect(outputAssociatedValue)
+        return sideEffect(outputAssociatedValue).eraseToAnyAsyncSequence()
       }
 
       return nil
@@ -100,11 +100,11 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
   @discardableResult
   public func map<OutputAssociatedValue>(
     output: @escaping (OutputAssociatedValue) -> O,
-    to sideEffect: @escaping (OutputAssociatedValue) async -> E?,
+    to sideEffect: @Sendable @escaping (OutputAssociatedValue) async -> E?,
     priority: TaskPriority? = nil,
     strategy: ExecutionStrategy<S> = .continueWhenAnyState
   ) -> Self {
-    let sideEffect: (OutputAssociatedValue) -> AnyAsyncSequence<E> = { outputAssociatedValue in
+    let sideEffect: @Sendable (OutputAssociatedValue) -> AnyAsyncSequence<E> = { outputAssociatedValue in
       return AsyncJustSequence({ await sideEffect(outputAssociatedValue) })
         .eraseToAnyAsyncSequence()
     }
@@ -183,7 +183,7 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
   public func connectAsSender<StateAssociatedValue, OtherE>(
     to pipe: Pipe<OtherE>,
     when state: @escaping (StateAssociatedValue) -> S,
-    send event: @escaping (StateAssociatedValue) -> OtherE
+    send event: @Sendable @escaping (StateAssociatedValue) -> OtherE
   ) -> Self {
     return self.register(middleware: { (inputState: S) in
       guard let value = inputState.associatedValue(matching: state)

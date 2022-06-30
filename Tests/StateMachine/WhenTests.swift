@@ -26,7 +26,7 @@ final class WhenTests: XCTestCase {
     case o1
   }
 
-  func testInit_sets_predicate_output_and_transitions_when_passing_oneOf_execute_and_transitions() async {
+  func test_init_sets_predicate_output_and_transitions_when_passing_oneOf_execute_and_transitions() async {
     let receivedStateInExecute = ManagedCriticalState<State?>(nil)
     let receivedStateInTransitions = ManagedCriticalState<State?>(nil)
 
@@ -68,7 +68,7 @@ final class WhenTests: XCTestCase {
     XCTAssertEqual(receivedStateInTransitions.criticalState, expectedState)
   }
 
-  func testInit_sets_predicate_output_and_transitions_when_passing_oneOf_and_execute() async {
+  func test_init_sets_predicate_output_and_transitions_when_passing_oneOf_and_execute() async {
     let receivedStateInExecute = ManagedCriticalState<State?>(nil)
 
     let expectedState = State.s1
@@ -103,7 +103,7 @@ final class WhenTests: XCTestCase {
     XCTAssertTrue(receivedTransitionsFromExpectedState.isEmpty)
   }
 
-  func testInit_sets_predicate_output_and_transitions_when_passing_state_execute_and_transitions() async {
+  func test_init_sets_predicate_output_and_transitions_when_passing_state_execute_and_transitions() async {
     let receivedStateInExecute = ManagedCriticalState<State?>(nil)
     let receivedStateInTransitions = ManagedCriticalState<State?>(nil)
 
@@ -141,7 +141,7 @@ final class WhenTests: XCTestCase {
     XCTAssertEqual(receivedStateInTransitions.criticalState, expectedState)
   }
 
-  func testInit_sets_predicate_output_and_transitions_when_passing_state_and_execute() async {
+  func test_init_sets_predicate_output_and_transitions_when_passing_state_and_execute() async {
     let receivedStateInExecute = ManagedCriticalState<State?>(nil)
 
     let expectedState = State.s1
@@ -171,7 +171,7 @@ final class WhenTests: XCTestCase {
     XCTAssertTrue(receivedTransitionsFromExpectedState.isEmpty)
   }
 
-  func testInit_sets_predicate_output_and_transitions_when_passing_state_with_associated_value_execute_and_transitions() async {
+  func test_init_sets_predicate_output_and_transitions_when_passing_state_with_associated_value_execute_and_transitions() async {
     let receivedValueInExecute = ManagedCriticalState<String?>(nil)
     let receivedValueInTransitions = ManagedCriticalState<String?>(nil)
 
@@ -215,7 +215,7 @@ final class WhenTests: XCTestCase {
     XCTAssertEqual(receivedValueInTransitions.criticalState, expectedValue)
   }
 
-  func testInit_sets_predicate_output_and_transitions_when_passing_state_with_associated_value_and_execute() async {
+  func test_init_sets_predicate_output_and_transitions_when_passing_state_with_associated_value_and_execute() async {
     let receivedValueInExecute = ManagedCriticalState<String?>(nil)
 
     let expectedValue = "value"
@@ -252,7 +252,7 @@ final class WhenTests: XCTestCase {
     XCTAssertTrue(receivedTransitionsFromExpectedState.isEmpty)
   }
 
-  func testTransitionsBuilder_returns_expression() async {
+  func test_transitionsBuilder_returns_expression() async {
     let transitionIsCalled = ManagedCriticalState<Bool>(false)
 
     // Given

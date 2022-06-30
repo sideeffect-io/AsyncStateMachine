@@ -243,66 +243,62 @@ XCTStateMachine(stateMachine)
 
 ## Using Async State Machine with SwiftUI and UIKit
 
-No matter the UI framework you use, rendering a user interface is about interpreting a state. You can use an *AsyncStateMachineSequence* as a reliable state factory.
+No matter the UI framework you use, rendering a user interface is about interpreting a state. You can use an `AsyncStateMachineSequence` as a reliable state factory, exposing the state with the provided `ViewState`.
 
 A simple and naive SwiftUI usage could be:
 
 ```swift
 struct ContentView: View {
-  @SwiftUI.State var state: State
-  let sequence: AsyncStateMachineSequence<State, Event, Output>
+  @ObservedObject viewState: ViewState<State, Event, Output>
 
   var body: some View {
     VStack {
-      Text(self.state.description)
+      Text(self.viewState.state.description)
       Button { 
         Task {
-          await self.sequence.send(Event.personsHaveEntered(persons: 1))
+          await self.viewState.send(Event.personsHaveEntered(persons: 1))
         }
       } label: { 
         Text("New person")
       }
       Button { 
         Task {
-          await self.sequence.send(Event.closeButtonWasPressed)
+          await self.viewState.send(Event.closeButtonWasPressed)
         }
       } label: { 
         Text("Close the door")
       }
     }.task {
-      for await state in self.sequence {
-        self.state = state
-      }
+      await viewState.start()
     }
   }
 }
 
 …
 
-ContentView(
-  state: stateMachine.initial,
-  sequence: sequence
-)
+let viewState = ViewState(myAsyncStateMachine)
+ContentView(viewState: viewState)
 ```
-
-One could wrap up an `AsyncStateMachineSequence` inside a generic `@MainActor class ViewState: ObservableObject` that would expose a `@Published var state: State` and handle the sequence iteration. That would simplify the state management inside the SwiftUI views.
 
 With UIKit, a simple and naive approach would be:
 
 ```swift
 let task: Task<Void, Never>!
-let sequence: AsyncStateMachineSequence<State, Event, Output>!
+let viewState: ViewState<State, Event, Output>!
+let cancellable = AnyCancellable()
 
 override func viewDidLoad() {
   super.viewDidLoad()
-  self.task = Task {
-    for await state in self.sequence {
-	   self.render(state: state)
-	 }
+  self.task = Task { [weak self] in
+    await self?.viewState.start()
+  }
+  
+  self.cancellable = self.viewState.$state.sink { [weak self] state in
+  	self?.render(state: state)
   }
 }
 
-@MainActor func render(state: State) {
+func render(state: State) {
   …
 }
 
@@ -318,7 +314,7 @@ func deinit() {
 Allows to send an event while awaiting for a specific state or set of states to resume.
 
 ```swift
-await sequence.send(
+await viewState.send(
   .closeButtonWasPressed,
   resumeWhen: .closed
 )`
@@ -355,13 +351,16 @@ When(states: OneOf {
 
 ### SwiftUI bindings
 
-Allows to create a SwiftUI binding on any value, sending an Event when the binding changes.
+Allows to create a SwiftUI binding on the current state, sending an Event when the binding changes.
 
 ```swift
-self.sequence.binding(
-	get: self.state.description,
-	send: .closeButtonWasPressed
-)
+self.viewState.binding(send: .closeButtonWasPressed)
+```
+
+Allows to create a SwiftUI binding on a property of the current state, sending an Event when the binding changes.
+
+```swift
+self.viewState.binding(keypath: \.persons, send: .closeButtonWasPressed)
 ```
 
 ### Connecting two state machines
@@ -369,14 +368,14 @@ self.sequence.binding(
 This will send the event `OtherEvent.refresh` in the other state machine when the first state machine's state is `State.closed`.
 
 ```swift
-let connector = Connector<OtherEvent>()
+let pipe = Pipe<OtherEvent>()
 
 let runtime = Runtime<State, Event, Output>()
   ...
-  .connectAsSender(to: connector, when: State.closed, send: OtherEvent.refresh)
+  .connectAsSender(to: pipe, when: State.closed, send: OtherEvent.refresh)
 	
 
 let otherRuntime = Runtime<OtherState, OtherEvent, OtherOutput>()
   ...
-  .connectAsReceiver(to: connector)
+  .connectAsReceiver(to: pipe)
 ```

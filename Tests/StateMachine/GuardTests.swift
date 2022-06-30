@@ -9,7 +9,7 @@
 import XCTest
 
 final class GuardTests: XCTestCase {
-  func testInit_sets_predicate() {
+  func test_init_sets_predicate() {
     let sut = Guard(predicate: true)
 
     XCTAssertTrue(sut.predicate)

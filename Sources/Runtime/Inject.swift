@@ -35,6 +35,45 @@ public func inject<A, B, C, R>(
     }
 }
 
+public func inject<A, B, C, D, R>(
+    deps a: A,
+    _ b: B,
+    _ c: C,
+    _ d: D,
+    in block: @escaping (A, B, C, D) async -> R
+) -> () async -> R {
+    {
+        await block(a, b, c, d)
+    }
+}
+
+public func inject<A, B, C, D, E, R>(
+    deps a: A,
+    _ b: B,
+    _ c: C,
+    _ d: D,
+    _ e: E,
+    in block: @escaping (A, B, C, D, E) async -> R
+) -> () async -> R {
+    {
+        await block(a, b, c, d, e)
+    }
+}
+
+public func inject<A, B, C, D, E, F, R>(
+    deps a: A,
+    _ b: B,
+    _ c: C,
+    _ d: D,
+    _ e: E,
+    _ f: F,
+    in block: @escaping (A, B, C, D, E, F) async -> R
+) -> () async -> R {
+    {
+        await block(a, b, c, d, e, f)
+    }
+}
+
 public func inject<A, B, R>(
     dep b: B,
     in block: @escaping (A, B) async -> R
@@ -62,5 +101,30 @@ public func inject<A, B, C, D, R>(
 ) -> (A) async -> R {
     { a in
         await block(a, b, c, d)
+    }
+}
+
+public func inject<A, B, C, D, E, R>(
+    deps b: B,
+    _ c: C,
+    _ d: D,
+    _ e: E,
+    in block: @escaping (A, B, C, D, E) async -> R
+) -> (A) async -> R {
+    { a in
+        await block(a, b, c, d, e)
+    }
+}
+
+public func inject<A, B, C, D, E, F, R>(
+    deps b: B,
+    _ c: C,
+    _ d: D,
+    _ e: E,
+    _ f: F,
+    in block: @escaping (A, B, C, D, E, F) async -> R
+) -> (A) async -> R {
+    { a in
+        await block(a, b, c, d, e, f)
     }
 }

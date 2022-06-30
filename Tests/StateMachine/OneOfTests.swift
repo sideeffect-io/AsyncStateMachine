@@ -15,7 +15,7 @@ final class OneOfTests: XCTestCase {
     case s3
   }
 
-  func testInit_sets_predicate_when_called_with_resultBuilder() {
+  func test_init_sets_predicate_when_called_with_resultBuilder() {
     let sut = OneOf<State> {
       State.s1
       State.s2(value:)
