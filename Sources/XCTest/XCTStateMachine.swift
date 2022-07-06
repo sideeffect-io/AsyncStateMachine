@@ -6,6 +6,8 @@
 //
 
 #if DEBUG
+import XCTestDynamicOverlay
+
 public class XCTStateMachine<S, E, O>
 where 
 S: DSLCompatible & Equatable,
@@ -17,20 +19,22 @@ O: DSLCompatible & Equatable {
     self.stateMachine = stateMachine
   }
 
+  @discardableResult
   public func assert(
     when states: S...,
     on event: E,
-    transitionTo expectedState: S
+    transitionTo expectedState: S,
+    fail: (String) -> Void = XCTFail
   ) async -> Self {
     for state in states {
       let receivedState = await self.stateMachine.reduce(when: state, on: event)
       guard receivedState == expectedState else {
-        XCTFail(
-                    """
-                The assertion failed for state \(state) and event \(event):
-                expected new state: \(expectedState),
-                received new state: \(String(describing: receivedState))
-"""
+        fail(
+        """
+        The assertion failed for state \(state) and event \(event):
+        expected new state: \(expectedState),
+        received new state: \(String(describing: receivedState))
+        """
         )
         return self
       }
@@ -38,18 +42,20 @@ O: DSLCompatible & Equatable {
     return self
   }
 
+  @discardableResult
   public func assertNoTransition(
     when states: S...,
-    on event: E
+    on event: E,
+    fail: (String) -> Void = XCTFail
   ) async -> Self {
     for state in states {
       if let receivedState = await self.stateMachine.reduce(when: state, on: event) {
-        XCTFail(
-                    """
-                    The assertion failed for state \(state) and event \(event):
-                    expected no new state,
-                    received new state: \(receivedState)
-                    """
+        fail(
+        """
+        The assertion failed for state \(state) and event \(event):
+        expected no new state,
+        received new state: \(receivedState)
+        """
         )
         return self
       }
@@ -57,19 +63,21 @@ O: DSLCompatible & Equatable {
     return self
   }
 
+  @discardableResult
   public func assert(
     when states: S...,
-    execute expectedOutput: O
+    execute expectedOutput: O,
+    fail: (String) -> Void = XCTFail
   ) -> Self {
     for state in states {
       let receivedOutput = self.stateMachine.output(for: state)
       guard receivedOutput == expectedOutput else {
-        XCTFail(
-                    """
-                The assertion failed for state \(state):
-                expected output: \(expectedOutput),
-                received output: \(String(describing: receivedOutput))
-"""
+        fail(
+        """
+        The assertion failed for state \(state):
+        expected output: \(expectedOutput),
+        received output: \(String(describing: receivedOutput))
+        """
         )
         return self
       }
@@ -77,17 +85,19 @@ O: DSLCompatible & Equatable {
     return self
   }
 
+  @discardableResult
   public func assertNoOutput(
-    when states: S...
+    when states: S...,
+    fail: (String) -> Void = XCTFail
   ) -> Self {
     for state in states {
       if let receivedOutput = self.stateMachine.output(for: state) {
-        XCTFail(
-                    """
-                The assertion failed for state \(state):
-                expected no output,
-                received output: \(receivedOutput)
-"""
+        fail(
+        """
+        The assertion failed for state \(state):
+        expected no output,
+        received output: \(receivedOutput)
+        """
         )
         return self
       }

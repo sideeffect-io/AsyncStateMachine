@@ -1,7 +1,7 @@
 @testable import AsyncStateMachine
 import XCTest
 
-enum State: DSLCompatible {
+enum State: DSLCompatible, Equatable {
   case s1(value: String)
   case s2(value: String)
   case s3(value: String)
@@ -33,7 +33,7 @@ enum State: DSLCompatible {
   }
 }
 
-enum Event: DSLCompatible {
+enum Event: DSLCompatible, Equatable {
   case e1(value: String)
   case e2(value: String)
   case e3(value: String)
@@ -65,8 +65,10 @@ enum Event: DSLCompatible {
   }
 }
 
-enum Output: DSLCompatible {
+enum Output: DSLCompatible, Equatable {
   case o1(value: String)
+  case o2(value: String)
+  case o3(value: String)
 }
 
 let stateMachine = StateMachine<State, Event, Output>(initial: State.s1(value: "s1")) {
@@ -123,4 +125,98 @@ final class AsyncStatMachineSequenceTests: XCTestCase {
 //      task.cancel()
 //    }
 //  }
+
+  func test_states_and_events_match_the_expected_flow() async {
+    // Given
+    let stateMachine = StateMachine<State, Event, Output>(initial: State.s1(value: "value")) {
+      When(state: State.s1(value:)) { stateValue in
+        Execute(output: Output.o1(value: stateValue))
+      } transitions: { stateValue in
+
+        On(event: Event.e1(value:)) { eventValue in
+          Guard(predicate: stateValue.isEmpty || eventValue.isEmpty)
+        } transition: { eventValue in
+          Transition(to: State.s2(value: "new value"))
+        }
+
+        On(event: Event.e2(value:)) { eventValue in
+          Guard(predicate: !stateValue.isEmpty && !eventValue.isEmpty)
+        } transition: { eventValue in
+          Transition(to: State.s3(value: eventValue))
+        }
+      }
+
+      When(state: State.s2(value:)) { stateValue in
+        Execute(output: Output.o2(value: stateValue))
+      } transitions: { stateValue in
+        On(event: Event.e3(value:)) { eventValue in
+          Guard(predicate: stateValue.isEmpty || eventValue.isEmpty)
+        } transition: { eventValue in
+          Transition(to: State.s4(value: eventValue))
+        }
+
+        On(event: Event.e4(value:)) { eventValue in
+          Guard(predicate: !stateValue.isEmpty && !eventValue.isEmpty)
+        } transition: { eventValue in
+          Transition(to: State.s5(value: eventValue))
+        }
+      }
+
+      When(states: OneOf {
+        State.s4(value:)
+        State.s5(value:)
+      }) { state in
+        Execute(output: Output.o3(value: state.value))
+      } transitions: { state in
+        On(event: Event.e5(value:)) { eventValue in
+          Guard(predicate: state.value.isEmpty || eventValue.isEmpty)
+        } transition: { eventValue in
+          Transition(to: State.s6(value: eventValue))
+        }
+
+        On(event: Event.e6(value:)) { eventValue in
+          Guard(predicate: !state.value.isEmpty && !eventValue.isEmpty)
+        } transition: { eventValue in
+          Transition(to: State.s7(value: eventValue))
+        }
+      }
+    }
+
+    let receivedStates = ManagedCriticalState<[State]>([])
+    let receivedEvents = ManagedCriticalState<[Event]>([])
+
+    let runtime = Runtime<State, Event, Output>()
+      .map(output: Output.o1(value:), to: { _ in Event.e1(value: "") })
+      .map(output: Output.o2(value:), to: { outputValue in Event.e4(value: outputValue) })
+      .map(output: Output.o3(value:), to: { outputValue in Event.e6(value: outputValue) })
+      .register(middleware: { state in receivedStates.withCriticalRegion{ $0.append(state) } })
+      .register(middleware: { event in receivedEvents.withCriticalRegion{ $0.append(event) } })
+
+    let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
+
+    // When
+    for await state in sequence {
+      print(state)
+      if state == State.s7(value: "new value") {
+        break
+      }
+    }
+
+    // Then
+    let expectedStates = [
+      State.s1(value: "value"),
+      State.s2(value: "new value"),
+      State.s5(value: "new value"),
+      State.s7(value: "new value")
+    ]
+
+    let expectedEvents = [
+      Event.e1(value: ""),
+      Event.e4(value: "new value"),
+      Event.e6(value: "new value"),
+    ]
+
+    XCTAssertEqual(receivedStates.criticalState, expectedStates)
+    XCTAssertEqual(receivedEvents.criticalState, expectedEvents)
+  }
 }
