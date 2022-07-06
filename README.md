@@ -3,17 +3,17 @@
 
 ```swift
 let stateMachine = StateMachine(initial: .state1) {
-  When(state: .state1) { _ in
+  When(state: .state1) {
     Execute(output: .output1)
-  } transitions: { _ in
-      On(event: .event1) { _ in Transition(to: .state2) }
-      On(event: .event2) { _ in Transition(to: .state3) }
-      On(event: .event3) { value in Transition(to: .state4(value)) }
+  } transitions: {
+      On(event: .event1) { Transition(to: .state2) }
+      On(event: .event2) { Transition(to: .state3) }
+      On(event: .event3(value:)) { value in Transition(to: .state4(value)) }
   }
      
-  When(state: .state2) { _ in
+  When(state: .state2(value:)) { value in
     Execute.noOutput
-  } transitions: { _ in
+  } transitions: { value in
          …
   }
 }
@@ -36,6 +36,7 @@ As a picture is worth a thousand words, here’s an example of a state machine t
 ![](Elevator.jpeg)
 
 <br>
+
 ### How does it read?
 
 - **INITIALLY**, the elevator is `open` with 0 person inside
@@ -105,7 +106,9 @@ The only requirement to be able to use enums with the DSL is to have them confor
 
 The DSL aims to describe a formal state machine: no side effects, only pure functions!
 
-Instead, the `StateMachine` declares **output** _values_ to describe the _intent_ of side effects to be performed, but the _implementation_ of those side effects are declared in the `Runtime` where one can map outputs to side effect functions. (Amongst other benefits, this decoupling allows for easier testing of your State Machine without depending on the implementation of the side effects.)
+The `StateMachine` declares **output** _values_ to describe the _intent_ of side effects to be performed, but the _implementation_ of those side effects are declared in the `Runtime` where one can map outputs to side effect functions. 
+
+(Amongst other benefits, this decoupling allows for easier testing of your State Machine without depending on the implementation of the side effects.)
 
 
 ```swift
@@ -223,19 +226,19 @@ XCTStateMachine(stateMachine)
   .assertNoOutput(when: .open(persons: 0))
   .assert(
     when: .open(persons: 0),
-	 on: .personsHaveEntered(persons: 1),
+    on: .personsHaveEntered(persons: 1),
     transitionTo: .open(persons: 1)
   )
   .assert(
     when: .open(persons: 5),
-	 on: .closeButtonWasPressed,
-	 transitionTo: .closing(persons: 5)
+    on: .closeButtonWasPressed,
+    transitionTo: .closing(persons: 5)
   )
   .assertNoTransition(when: .open(persons: 15), on: .closeButtonWasPressed)
   .assert(when: .closing(persons: 1), execute: .close(speed: 2))
   .assert(
-	 when: .closing(persons: 1),
-	 on: .doorHasLocked,
+    when: .closing(persons: 1),
+    on: .doorHasLocked,
     transitionTo: .closed
   )
   .assertNoOutput(when: .closed)
