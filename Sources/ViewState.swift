@@ -1,13 +1,10 @@
 //
 //  ViewState.swift
-//  
+//
 //
 //  Created by Thibault WITTEMBERG on 02/07/2022.
 //
 
-import Foundation
-
-@MainActor
 public class ViewState<S, E, O>: ObservableObject
 where S: DSLCompatible & Equatable, E: DSLCompatible, O: DSLCompatible {
   @Published public var state: S
@@ -19,11 +16,11 @@ where S: DSLCompatible & Equatable, E: DSLCompatible, O: DSLCompatible {
     self.state = self.asyncStateMachineSequence.initialState
   }
 
-  nonisolated public func send(_ event: E) async {
-    await self.asyncStateMachineSequence.send(event)
+  public func send(_ event: E) {
+    self.asyncStateMachineSequence.send(event)
   }
 
-  nonisolated public func send(
+  public func send(
     _ event: E,
     resumeWhen predicate: @escaping (S) -> Bool
   ) async {
@@ -38,12 +35,12 @@ where S: DSLCompatible & Equatable, E: DSLCompatible, O: DSLCompatible {
           return false
         })
 
-        await asyncStateMachineSequence.send(event)
+        asyncStateMachineSequence.send(event)
       }
     }
   }
 
-  nonisolated public func send(
+  public func send(
     _ event: E,
     resumeWhen state: S
   ) async {
@@ -53,7 +50,7 @@ where S: DSLCompatible & Equatable, E: DSLCompatible, O: DSLCompatible {
     )
   }
 
-  nonisolated public func send<StateAssociatedValue>(
+  public func send<StateAssociatedValue>(
     _ event: E,
     resumeWhen state: @escaping (StateAssociatedValue) -> S
   ) async {
@@ -73,7 +70,7 @@ where S: DSLCompatible & Equatable, E: DSLCompatible, O: DSLCompatible {
     )
   }
 
-  func publish(state: S) {
+  @MainActor func publish(state: S) {
     if state != self.state {
       self.state = state
     }
@@ -94,9 +91,7 @@ public extension ViewState {
     Binding {
       self.state
     } set: { [asyncStateMachineSequence] value in
-      Task {
-        await asyncStateMachineSequence.send(event(value))
-      }
+      asyncStateMachineSequence.send(event(value))
     }
   }
 
@@ -108,9 +103,7 @@ public extension ViewState {
     Binding {
       self.state[keyPath: keypath]
     } set: { [asyncStateMachineSequence] value in
-      Task {
-        await asyncStateMachineSequence.send(event(value))
-      }
+      asyncStateMachineSequence.send(event(value))
     }
   }
 

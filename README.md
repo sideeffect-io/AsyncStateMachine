@@ -14,7 +14,7 @@ let stateMachine = StateMachine(initial: .state1) {
   When(state: .state2(value:)) { value in
     Execute.noOutput
   } transitions: { value in
-         …
+      …
   }
 }
 ```
@@ -24,7 +24,7 @@ let stateMachine = StateMachine(initial: .state1) {
 - State machines are declarative: a DSL offers a natural and concise syntax
 - Swift concurrency is at the core:
 	- A state machine is an `AsyncSequence`
-	- Each side effect runs inside a `Task` that benefit from cooperative cancellation
+	- Each side effect runs inside a `Task` that benefits from cooperative cancellation
 	- Concurrent transitions can suspend
 - State machines are built in complete isolation: tests dont require mocks
 - Dependencies are injected per side effect: no global bag of dependencies
@@ -100,7 +100,7 @@ let stateMachine = StateMachine(initial: State.open(persons: 0)) {
 }
 ```
 
-The only requirement to be able to use enums with the DSL is to have them conform to *DSLCompatible*.
+The only requirement to be able to use enums with the DSL is to have them conform to *DSLCompatible* (which allows to use enums in a declarative manner, without the need for pattern matching).
 
 ## The Runtime
 
@@ -152,17 +152,18 @@ await sequence.send(Event.personsHaveEntered(persons: 3))
 ### Transitions
 
 - Transitions defined in the DSL are `async` functions; they will be executed in a non blocking way.
- - Event sending is `async`: `sequence.send(Event.closeButtonWasPressed)` will suspend until the event can be consumed. If an event previously sent is being processed by a transition, the next call to `send(_:)` will `await`. This prevents concurrent transitions to happen simultaneously (which could otherwise lead to inconsistent states).
+- Transitions cannot  If an event previously sent is being processed by a transition, the next call to `send(_:)` will `await`. This prevents concurrent transitions to happen simultaneously (which could otherwise lead to inconsistent states).
 
 ### Side effects
 
 - Side effects are `async` functions executed in the context of `Tasks`.
 - Task priority can be set in the Runtime: `.map(output: Output.close(speed:), to: close(speed:), priority: .high)`.
-- Collaborative task cancellation applies: when the state machine parent task is cancelled, every side effect task will be marked as cancelled.
+- Collaborative task cancellation applies: when an AsyncStateMachineSequence is deinit, all the pending side effect tasks will be marked as cancelled.
 
 ### Async sequence
 
 - `AsyncStateMachineSequence` benefits from all the operators associated to `AsyncSequence` (`map`, `filter`, …). (See also [swift async algorithms](https://github.com/apple/swift-async-algorithms))
+- `AsyncStateMachineSequence` is compliant with a multiple producer / multiple consumer mode in a concurrent mode. Although to output is not shared (meaning each consumer will receive the successive versions of the state), the transitions are guaranteed concurrent-safe.
 
 ## How to inject dependencies?
 
@@ -371,14 +372,14 @@ self.viewState.binding(keypath: \.persons, send: .closeButtonWasPressed)
 This will send the event `OtherEvent.refresh` in the other state machine when the first state machine's state is `State.closed`.
 
 ```swift
-let pipe = Pipe<OtherEvent>()
+let channel = Channel<OtherEvent>()
 
 let runtime = Runtime<State, Event, Output>()
   ...
-  .connectAsSender(to: pipe, when: State.closed, send: OtherEvent.refresh)
+  .connectAsSender(to: channel, when: State.closed, send: OtherEvent.refresh)
 	
 
 let otherRuntime = Runtime<OtherState, OtherEvent, OtherOutput>()
   ...
-  .connectAsReceiver(to: pipe)
+  .connectAsReceiver(to: channel)
 ```

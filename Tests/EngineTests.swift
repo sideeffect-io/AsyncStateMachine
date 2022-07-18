@@ -28,86 +28,10 @@ final class EngineTests: XCTestCase {
     case o2
   }
 
-  func test_init_sets_all_the_properties_when_called_with_state_machine_and_runtime() async throws {
-    let outputIsCalled = ManagedCriticalState<Bool>(false)
-    let transitionIsCalled = ManagedCriticalState<Bool>(false)
-    let sideEffectIsCalled = ManagedCriticalState<Bool>(false)
-
-    let stateMachine = StateMachine<State, Event, Output>(initial: State.s1) {
-      When(state: State.s1) { _ in
-        outputIsCalled.apply(criticalState: true)
-        return Execute(output: Output.o1)
-      } transitions: { _ in
-        On(event: Event.e1) { _ in
-          transitionIsCalled.apply(criticalState: true)
-          return Transition(to: State.s2(value: "2"))
-        }
-      }
-    }
-
-    let runtime = Runtime<State, Event, Output>()
-      .map(output: Output.o1, to: {
-        sideEffectIsCalled.apply(criticalState: true)
-        return Event.e1
-      })
-      .register(middleware: { (state: State) in })
-      .register(middleware: { (event: Event) in })
-
-    // Given
-    let sut = Engine(stateMachine: stateMachine, runtime: runtime)
-
-    // When
-    let initialState = await sut.resolveInitialState()
-    // Then
-    XCTAssertEqual(initialState, State.s1)
-
-    // When
-    _ = await sut.resolveOutput(State.s1)
-    // Then
-    XCTAssertTrue(outputIsCalled.criticalState)
-
-    // When
-    _ = await sut.computeNextState(State.s1, Event.e1)
-    XCTAssertTrue(transitionIsCalled.criticalState)
-
-    // When
-    let receivedSideEffect = await sut.resolveSideEffect(Output.o1)
-    // Then
-    let eventSequence = receivedSideEffect?.execute(Output.o1)
-    let _ = try await eventSequence?.collect()
-    XCTAssertTrue(sideEffectIsCalled.criticalState)
-
-    // When
-    Task {
-      await sut.sendEvent(Event.e1)
-    }
-    // Then
-    let receivedEvent = await sut.getEvent()
-    XCTAssertEqual(receivedEvent, Event.e1)
-
-    // When
-    let stateMiddlewaresCount = await sut.stateMiddlewares.count
-    // Then
-    XCTAssertEqual(stateMiddlewaresCount, 1)
-
-    // When
-    let eventMiddlewaresCount = await sut.eventMiddlewares.count
-    // Then
-    XCTAssertEqual(eventMiddlewaresCount, 1)
-
-    // When
-    let tasksInProgressCount = await sut.tasksInProgress.count
-    // Then
-    XCTAssertEqual(tasksInProgressCount, 0)
-  }
-
   func test_init_sets_all_the_properties_when_called_with_functions() async throws {
-    let resolveInitialStateIsCalled = ManagedCriticalState<Bool>(false)
     let resolvedOutputIsCalled = ManagedCriticalState<Bool>(false)
     let computeNextStateIsCalled = ManagedCriticalState<Bool>(false)
     let resolveSideEffectIsCalled = ManagedCriticalState<Bool>(false)
-    let sendEventIsCalled = ManagedCriticalState<Bool>(false)
-    let getEventIsCalled = ManagedCriticalState<Bool>(false)
     let eventMiddlewareIsCalled = ManagedCriticalState<Bool>(false)
     let stateMiddlewareIsCalled = ManagedCriticalState<Bool>(false)
 
@@ -116,20 +40,12 @@ final class EngineTests: XCTestCase {
 
     // Given
     let sut = Engine<State, Event, Output>(
-      resolveInitialState: { resolveInitialStateIsCalled.apply(criticalState: true); return State.s1 },
       resolveOutput: { _ in resolvedOutputIsCalled.apply(criticalState: true); return nil },
       computeNextState: { _, _ in computeNextStateIsCalled.apply(criticalState: true); return nil},
       resolveSideEffect: { _ in resolveSideEffectIsCalled.apply(criticalState: true); return nil },
-      sendEvent: { _ in sendEventIsCalled.apply(criticalState: true) },
-      getEvent: { getEventIsCalled.apply(criticalState: true); return nil },
       eventMiddlewares: [eventMiddleware],
       stateMiddlewares: [stateMiddleware]
     )
-
-    // When
-    _ = await sut.resolveInitialState()
-    // Then
-    XCTAssertTrue(resolveInitialStateIsCalled.criticalState)
 
     // When
     _ = await sut.resolveOutput(State.s1)
@@ -144,16 +60,6 @@ final class EngineTests: XCTestCase {
     _ = await sut.resolveSideEffect(Output.o1)
     // Then
     XCTAssertTrue(resolveSideEffectIsCalled.criticalState)
-
-    // When
-    await sut.sendEvent(Event.e1)
-    // Then
-    XCTAssertTrue(sendEventIsCalled.criticalState)
-
-    // When
-    _ = await sut.getEvent()
-    // Then
-    XCTAssertTrue(getEventIsCalled.criticalState)
 
     // When
     let stateMiddlewaresCount = await sut.stateMiddlewares.count
@@ -186,12 +92,9 @@ final class EngineTests: XCTestCase {
 
     // Given
     let sut = Engine<State, Event, Output>(
-      resolveInitialState: { State.s1 },
       resolveOutput: { _ in nil },
       computeNextState: { _, _ in nil},
       resolveSideEffect: { _ in nil },
-      sendEvent: { _ in },
-      getEvent: { nil },
       eventMiddlewares: [],
       stateMiddlewares: []
     )
@@ -222,12 +125,9 @@ final class EngineTests: XCTestCase {
 
     // Given
     let sut = Engine<State, Event, Output>(
-      resolveInitialState: { State.s1 },
       resolveOutput: { _ in nil },
       computeNextState: { _, _ in nil},
       resolveSideEffect: { _ in nil },
-      sendEvent: { _ in },
-      getEvent: { nil },
       eventMiddlewares: [],
       stateMiddlewares: []
     )
@@ -265,12 +165,9 @@ final class EngineTests: XCTestCase {
 
     // Given
     let sut = Engine<State, Event, Output>(
-      resolveInitialState: { State.s1 },
       resolveOutput: { _ in nil },
       computeNextState: { _, _ in nil},
       resolveSideEffect: { _ in nil },
-      sendEvent: { _ in },
-      getEvent: { nil },
       eventMiddlewares: [],
       stateMiddlewares: []
     )
@@ -310,12 +207,9 @@ final class EngineTests: XCTestCase {
 
     // Given
     let sut = Engine<State, Event, Output>(
-      resolveInitialState: { State.s1 },
       resolveOutput: { _ in nil },
       computeNextState: { _, _ in nil},
       resolveSideEffect: { _ in nil },
-      sendEvent: { _ in },
-      getEvent: { nil },
       eventMiddlewares: [],
       stateMiddlewares: []
     )
@@ -377,12 +271,9 @@ final class EngineTests: XCTestCase {
     }, priority: .high)
 
     let sut = Engine<State, Event, Output>(
-      resolveInitialState: { State.s1 },
       resolveOutput: { _ in nil },
       computeNextState: { _, _ in nil},
       resolveSideEffect: { _ in nil },
-      sendEvent: { _ in },
-      getEvent: { nil },
       eventMiddlewares: [middlewareA, middlewareB],
       stateMiddlewares: []
     )
@@ -449,12 +340,9 @@ final class EngineTests: XCTestCase {
     }, priority: nil)
 
     let sut = Engine<State, Event, Output>(
-      resolveInitialState: { State.s1 },
       resolveOutput: { _ in nil },
       computeNextState: { _, _ in nil},
       resolveSideEffect: { _ in nil },
-      sendEvent: { _ in },
-      getEvent: { nil },
       eventMiddlewares: [],
       stateMiddlewares: []
     )
@@ -490,12 +378,9 @@ final class EngineTests: XCTestCase {
 
     // Given
     let sut = Engine<State, Event, Output>(
-      resolveInitialState: { State.s1 },
       resolveOutput: { _ in nil },
       computeNextState: { _, _ in nil},
       resolveSideEffect: { _ in nil },
-      sendEvent: { _ in },
-      getEvent: { nil },
       eventMiddlewares: [],
       stateMiddlewares: []
     )
@@ -525,7 +410,7 @@ final class EngineTests: XCTestCase {
     wait(for: [tasksAreStarted], timeout: 10.0)
 
     // When
-    await sut.process(state: State.s3)
+    await sut.process(state: State.s3, sendBackEvent: nil)
 
     // Then
     wait(for: [tasksAreCancelled], timeout: 10.0)
@@ -572,18 +457,15 @@ final class EngineTests: XCTestCase {
     }, priority: .high)
 
     let sut = Engine<State, Event, Output>(
-      resolveInitialState: { State.s1 },
       resolveOutput: { _ in nil },
       computeNextState: { _, _ in nil},
       resolveSideEffect: { _ in nil },
-      sendEvent: { _ in },
-      getEvent: { nil },
       eventMiddlewares: [],
       stateMiddlewares: [middlewareA, middlewareB]
     )
 
     // When
-    let removeTasksInProgressTasks = await sut.process(state: State.s1)
+    let removeTasksInProgressTasks = await sut.process(state: State.s1, sendBackEvent: nil)
 
     wait(for: [middlewaresHaveBeenCalled], timeout: 10.0)
 
@@ -619,10 +501,10 @@ final class EngineTests: XCTestCase {
     let sideEffectIsCalled = expectation(description: "Side effect is called")
 
     let resolveSideEffectIsCalled = ManagedCriticalState<Bool>(false)
+    let receivedEvent = ManagedCriticalState<Event?>(nil)
 
     // Given
     let sut = Engine<State, Event, Output>(
-      resolveInitialState: { State.s1 },
       resolveOutput: { _ in Output.o1 },
       computeNextState: { _, _ in nil},
       resolveSideEffect: { _ in
@@ -631,7 +513,6 @@ final class EngineTests: XCTestCase {
           predicate: { _ in true},
           execute: { _ in
             AsyncJustSequence {
-              sideEffectIsCalled.fulfill()
               return Event.e1
             }.eraseToAnyAsyncSequence()
           },
@@ -639,19 +520,21 @@ final class EngineTests: XCTestCase {
           strategy: .continueWhenAnyState
         )
       },
-      sendEvent: { _ in },
-      getEvent: { nil },
       eventMiddlewares: [],
       stateMiddlewares: []
     )
 
     // When
-    await sut.process(state: State.s1)
+    await sut.process(state: State.s1, sendBackEvent: { event in
+      receivedEvent.apply(criticalState: event)
+      sideEffectIsCalled.fulfill()
+    })
 
     // Then
     wait(for: [sideEffectIsCalled], timeout: 10.0)
 
     XCTAssertTrue(resolveSideEffectIsCalled.criticalState)
+    XCTAssertEqual(receivedEvent.criticalState, Event.e1)
   }
 
   func test_executeSideEffect_execute_side_effect_when_called() async {
@@ -665,7 +548,6 @@ final class EngineTests: XCTestCase {
 
     // Given
     let sut = Engine<State, Event, Output>(
-      resolveInitialState: { State.s1 },
       resolveOutput: { state in
         receivedStateInResolveOutput.apply(criticalState: state)
         return Output.o1
@@ -686,17 +568,15 @@ final class EngineTests: XCTestCase {
           strategy: .continueWhenAnyState
         )
       },
-      sendEvent: { event in
-        receivedEventInSendEvent.apply(criticalState: event)
-        eventIsSent.fulfill()
-      },
-      getEvent: { nil },
       eventMiddlewares: [],
       stateMiddlewares: []
     )
 
     // When
-    let cleaningTask = await sut.executeSideEffect(for: State.s3)
+    let cleaningTask = await sut.executeSideEffect(for: State.s3, sendBackEvent: { event in
+      receivedEventInSendEvent.apply(criticalState: event)
+      eventIsSent.fulfill()
+    })
 
     wait(for: [eventIsSent], timeout: 10.0)
 
@@ -716,7 +596,6 @@ final class EngineTests: XCTestCase {
   func test_executeSideEffect_execute_side_effect_when_side_effect_fails() async {
     // Given
     let sut = Engine<State, Event, Output>(
-      resolveInitialState: { State.s1 },
       resolveOutput: { _ in Output.o1 },
       computeNextState: { _, _ in nil},
       resolveSideEffect: { _ in
@@ -727,14 +606,12 @@ final class EngineTests: XCTestCase {
           strategy: .continueWhenAnyState
         )
       },
-      sendEvent: { _ in },
-      getEvent: { nil },
       eventMiddlewares: [],
       stateMiddlewares: []
     )
 
     // When
-    let cleaningTask = await sut.executeSideEffect(for: State.s3)
+    let cleaningTask = await sut.executeSideEffect(for: State.s3, sendBackEvent: nil)
 
     // Then
     await cleaningTask?.value
@@ -748,12 +625,9 @@ final class EngineTests: XCTestCase {
 
     // Given
     let sut = Engine<State, Event, Output>(
-      resolveInitialState: { State.s1 },
       resolveOutput: { _ in Output.o1 },
       computeNextState: { _, _ in nil},
       resolveSideEffect: { _ in nil },
-      sendEvent: { _ in },
-      getEvent: { nil },
       eventMiddlewares: [],
       stateMiddlewares: []
     )
@@ -772,5 +646,42 @@ final class EngineTests: XCTestCase {
 
     XCTAssertFalse(shouldBeRemoved.unsafelyUnwrapped)
     XCTAssertEqual(receivedState.criticalState, State.s2(value: "value"))
+  }
+
+  func test_deinit_cancels_all_tasks_when_called () async {
+    let engineHasBeenDeinit = expectation(description: "The engine has been deinit")
+
+    let tasksHaveBeenCancelled = expectation(description: "The tasks have been cancelled")
+    tasksHaveBeenCancelled.expectedFulfillmentCount = 2
+
+    // Given
+    var sut: Engine<State, Event, Output>? = Engine(
+      resolveOutput: { _ in nil },
+      computeNextState: { _, _ in nil},
+      resolveSideEffect: { _ in nil },
+      eventMiddlewares: [],
+      stateMiddlewares: [],
+      onDeinit: { engineHasBeenDeinit.fulfill() }
+    )
+
+    let taskToCancelA = Task.forEver {
+    } onCancel: {
+      tasksHaveBeenCancelled.fulfill()
+    }
+
+    let taskToCancelB = Task.forEver {
+    } onCancel: {
+      tasksHaveBeenCancelled.fulfill()
+    }
+
+    await sut?.register(taskInProgress: taskToCancelA, cancelOn: { state in state == .s1 })
+    await sut?.register(taskInProgress: taskToCancelB, cancelOn: { state in state == .s3 })
+
+    // When
+    sut = nil
+
+    wait(for: [engineHasBeenDeinit, tasksHaveBeenCancelled], timeout: 1.0)
+
+    XCTAssertNil(sut)
   }
 }

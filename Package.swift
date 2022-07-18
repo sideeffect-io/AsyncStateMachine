@@ -24,10 +24,10 @@ let package = Package(
             dependencies: [
               .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay")
             ],
-            path: "Sources"),
+            path: "Sources/"),
         .testTarget(
             name: "AsyncStateMachineTests",
             dependencies: ["AsyncStateMachine"],
-            path: "Tests"),
+            path: "Tests/"),
     ]
 )

@@ -34,6 +34,20 @@
                ReferencedContainer = "container:">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AsyncAlgorithms"
+               BuildableName = "AsyncAlgorithms"
+               BlueprintName = "AsyncAlgorithms"
+               ReferencedContainer = "container:">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -59,6 +73,16 @@
                BlueprintIdentifier = "AsyncStateMachineTests"
                BuildableName = "AsyncStateMachineTests"
                BlueprintName = "AsyncStateMachineTests"
+               ReferencedContainer = "container:">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AsyncAlgorithmsTests"
+               BuildableName = "AsyncAlgorithmsTests"
+               BlueprintName = "AsyncAlgorithmsTests"
                ReferencedContainer = "container:">
             </BuildableReference>
          </TestableReference>

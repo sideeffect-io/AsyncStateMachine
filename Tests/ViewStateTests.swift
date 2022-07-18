@@ -9,7 +9,6 @@
 @testable import AsyncStateMachine
 @preconcurrency import XCTest
 
-@MainActor
 final class ViewStateTests: XCTestCase {
   enum State: DSLCompatible, Equatable {
     case s1
@@ -55,7 +54,7 @@ final class ViewStateTests: XCTestCase {
     }
 
     // When
-    await sut.send(expectedEvent)
+    sut.send(expectedEvent)
 
     // Then
     wait(for: [eventWasReceived], timeout: 1.0)
@@ -213,7 +212,7 @@ final class ViewStateTests: XCTestCase {
     // Then
   }
 
-  func test_binding_returns_binding_that_sends_event_when_passing_event() {
+  func test_binding_returns_binding_that_sends_event_when_passing_event() async {
     let eventWasReceived = expectation(description: "Event was received")
     let receivedEvent = ManagedCriticalState<Event?>(nil)
     let expectedEvent = Event.e1
@@ -246,7 +245,7 @@ final class ViewStateTests: XCTestCase {
     XCTAssertEqual(receivedEvent.criticalState, expectedEvent)
   }
 
-  func test_binding_returns_binding_that_receives_state_and_sends_event_when_passing_event_closure() {
+  func test_binding_returns_binding_that_receives_state_and_sends_event_when_passing_event_closure() async {
     let eventWasReceived = expectation(description: "Event was received")
     var receivedState: State?
     let expectedState = State.s2
@@ -315,7 +314,7 @@ final class ViewStateTests: XCTestCase {
 
     // initial state is State.s1 (\.value is nil)
     XCTAssertNil(received.wrappedValue)
-    
+
     sut.state = State.s4(value: expectedValue)
     XCTAssertEqual(received.wrappedValue, expectedValue)
 
@@ -329,7 +328,8 @@ final class ViewStateTests: XCTestCase {
     XCTAssertEqual(receivedEvent.criticalState, expectedEvent)
   }
 
-  func test_binding_returns_binding_that_receives_value_and_sends_event_when_passing_keypath_and_event() {
+  func test_binding_returns_binding_that_receives_value_and_sends_event_when_passing_keypath_and_event() async {
+    let initialStateWasPublished = expectation(description: "The initial state was published")
     let eventWasReceived = expectation(description: "Event was received")
     let expectedValue = "value"
 
@@ -350,6 +350,12 @@ final class ViewStateTests: XCTestCase {
       await sut.start()
     }
 
+    let cancellable = sut.$state.first().sink { state in
+      initialStateWasPublished.fulfill()
+    }
+
+    wait(for: [initialStateWasPublished], timeout: 1.0)
+
     // Given
     let received = sut.binding(keypath: \.value, send: expectedEvent)
 
@@ -366,6 +372,8 @@ final class ViewStateTests: XCTestCase {
 
     // Then
     XCTAssertEqual(receivedEvent.criticalState, expectedEvent)
+
+    cancellable.cancel()
   }
 }
 #endif

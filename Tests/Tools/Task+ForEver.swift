@@ -7,7 +7,7 @@
 
 extension Task where Success == Void, Failure == Never {
   static func forEver(
-    execute: @Sendable @escaping () -> Void,
+    execute: @Sendable @escaping () -> Void = {},
     onCancel: @Sendable @escaping () -> Void = {}
   ) -> Task<Success, Failure> {
     Task {

@@ -6,7 +6,7 @@
 //
 
 @testable import AsyncStateMachine
-@preconcurrency import XCTest
+import XCTest
 
 final class RuntimeTests: XCTestCase {
   enum State: DSLCompatible, Equatable {
@@ -191,43 +191,35 @@ final class RuntimeTests: XCTestCase {
     XCTAssertEqual(middleware.priority, .userInitiated)
   }
 
-  func test_connectAsReceiver_registers_channel_as_event_sender_when_called() async {
-    let eventIsReceivedExpectation = expectation(description: "event has been received in middleware")
+  func test_connectAsReceiver_registers_a_channelReceiver_when_called() {
     let receivedEvent = ManagedCriticalState<Event?>(nil)
 
-    let pipe = AsyncStateMachine.Pipe<Event>()
+    let channel = Channel<Event>()
 
     // Given
     let sut = Runtime<State, Event, Output>()
-      .connectAsReceiver(to: pipe)
+      .connectAsReceiver(to: channel)
 
-    Task {
-      for await event in sut.eventChannel {
-        receivedEvent.apply(criticalState: event)
-        eventIsReceivedExpectation.fulfill()
-        break
-      }
-    }
+    sut.channelReceivers.forEach { $0.update(receiver: { receivedEvent.apply(criticalState: $0) }) }
 
     // When
-    await pipe.push(Event.e2(value: "value"))
-    wait(for: [eventIsReceivedExpectation], timeout: 1)
+    channel.push(Event.e2(value: "value"))
 
     // Then
     XCTAssertEqual(receivedEvent.criticalState, Event.e2(value: "value"))
   }
 
-  func test_connectAsSender_registers_state_middleware_that_pushes_to_pipe_when_called() async {
+  func test_connectAsSender_registers_state_middleware_that_pushes_to_channel_when_called() async {
     let receivedEvent = ManagedCriticalState<Event?>(nil)
 
-    let pipe = AsyncStateMachine.Pipe<Event>()
-    pipe.register { event in
+    let channel = Channel<Event>()
+    channel.register { event in
       receivedEvent.apply(criticalState: event)
     }
 
     // Given
     let sut = Runtime<State, Event, Output>()
-      .connectAsSender(to: pipe, when: State.s1, send: Event.e1)
+      .connectAsSender(to: channel, when: State.s1, send: Event.e1)
 
     let middleware = sut.stateMiddlewares.first!
 
@@ -244,18 +236,18 @@ final class RuntimeTests: XCTestCase {
     XCTAssertEqual(receivedEvent.criticalState, Event.e1)
   }
 
-  func test_connectAsSender_registers_state_middleware_that_pushes_to_pipe_when_called_with_associated_value() async {
+  func test_connectAsSender_registers_state_middleware_that_pushes_to_channel_when_called_with_associated_value() async {
     let receivedEvent = ManagedCriticalState<Event?>(nil)
     let receivedValue = ManagedCriticalState<String?>(nil)
 
-    let pipe = AsyncStateMachine.Pipe<Event>()
-    pipe.register { event in
+    let channel = Channel<Event>()
+    channel.register { event in
       receivedEvent.apply(criticalState: event)
     }
 
     // Given
     let sut = Runtime<State, Event, Output>()
-      .connectAsSender(to: pipe, when: State.s2(value:)) { value in
+      .connectAsSender(to: channel, when: State.s2(value:)) { value in
         receivedValue.apply(criticalState: value)
         return Event.e1
       }

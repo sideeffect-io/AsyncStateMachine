@@ -5,7 +5,7 @@
 //  Created by Thibault WITTEMBERG on 09/07/2022.
 //
 
-struct MockError: Error {}
+struct MockError: Error, Equatable {}
 
 struct AsyncThrowingSequence<Element>: AsyncSequence {
   typealias Element = Element

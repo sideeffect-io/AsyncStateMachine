@@ -93,4 +93,17 @@ final class OrderedStorageTests: XCTestCase {
     // Then
     XCTAssertEqual(values, content)
   }
+
+  func test_count_returns_value() {
+    let content = [5, 4, 3, 2, 1]
+
+    // Given
+    let sut = OrderedStorage(contentOf: content)
+
+    // When
+    let received = sut.count
+
+    // Then
+    XCTAssertEqual(received, 5)
+  }
 }

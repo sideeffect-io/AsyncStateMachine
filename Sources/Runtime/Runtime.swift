@@ -5,13 +5,26 @@
 //  Created by Thibault WITTEMBERG on 25/06/2022.
 //
 
+final class ChannelReceiver<E>: Sendable
+where E: DSLCompatible {
+  typealias Receiver = @Sendable (E) -> Void
+  let receiver = ManagedCriticalState<Receiver?>(nil)
+
+  func receive(_ event: E) {
+    self.receiver.criticalState?(event)
+  }
+
+  func update(receiver: Receiver?) {
+    self.receiver.apply(criticalState: receiver)
+  }
+}
+
 public struct Runtime<S, E, O>: Sendable
 where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
   var sideEffects = [SideEffect<S, E, O>]()
   var stateMiddlewares = [Middleware<S>]()
   var eventMiddlewares = [Middleware<E>]()
-
-  let eventChannel = AsyncChannel<E>()
+  var channelReceivers = [ChannelReceiver<E>]()
 
   public init() {}
 
@@ -159,36 +172,39 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
 
   @discardableResult
   public func connectAsReceiver(
-    to pipe: Pipe<E>
+    to channel: Channel<E>
   ) -> Self {
-    pipe.register { [eventChannel] event in
-      await eventChannel.send(event)
-    }
-    return self
+    var mutableSelf = self
+
+    let channelReceiver = ChannelReceiver<E>()
+    channel.register { event in channelReceiver.receive(event) }
+    mutableSelf.channelReceivers.append(channelReceiver)
+
+    return mutableSelf
   }
 
   @discardableResult
   public func connectAsSender<OtherE>(
-    to pipe: Pipe<OtherE>,
+    to channel: Channel<OtherE>,
     when state: S,
     send event: OtherE
   ) -> Self {
     return self.register(middleware: { (inputState: S) in
       guard inputState.matches(state) else { return }
-      await pipe.push(event)
+      channel.push(event)
     })
   }
 
   @discardableResult
   public func connectAsSender<StateAssociatedValue, OtherE>(
-    to pipe: Pipe<OtherE>,
+    to channel: Channel<OtherE>,
     when state: @escaping (StateAssociatedValue) -> S,
     send event: @Sendable @escaping (StateAssociatedValue) -> OtherE
   ) -> Self {
     return self.register(middleware: { (inputState: S) in
       guard let value = inputState.associatedValue(matching: state)
       else { return }
-      await pipe.push(event(value))
+      channel.push(event(value))
     })
   }
 

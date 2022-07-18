@@ -1,85 +1,77 @@
-import Foundation
-
 public final class AsyncStateMachineSequence<S, E, O>: AsyncSequence, Sendable
 where S: DSLCompatible & Sendable, E: DSLCompatible & Sendable, O: DSLCompatible {
   public typealias Element = S
-  public typealias AsyncIterator = Iterator
+  public typealias AsyncIterator =
+  AsyncOnEachSequence<AsyncSerialSequence<AsyncCompactScanSequence<AsyncOnEachSequence<AsyncBufferedChannel<E>>, S>>>.Iterator
 
-  let engine: Engine<S, E, O>
   let initialState: S
+  let eventChannel: AsyncBufferedChannel<E>
+  let currentState: ManagedCriticalState<S?>
+  let engine: Engine<S, E, O>
+  let deinitBlock: @Sendable () -> Void
 
-  public init(
+  public convenience init(
     stateMachine: StateMachine<S, E, O>,
     runtime: Runtime<S, E, O>
   ) {
-    self.engine = Engine(stateMachine: stateMachine, runtime: runtime)
+    self.init(
+      stateMachine: stateMachine,
+      runtime: runtime,
+      onDeinit: nil
+    )
+  }
+
+  init(
+    stateMachine: StateMachine<S, E, O>,
+    runtime: Runtime<S, E, O>,
+    onDeinit: (() -> Void)? = nil
+  ) {
     self.initialState = stateMachine.initial
-  }
-
-  public func send(_ event: E) async {
-    await self.engine.sendEvent(event)
-  }
-
-  public func makeAsyncIterator() -> Iterator {
-    Iterator(engine: self.engine)
-  }
-
-  public struct Iterator: AsyncIteratorProtocol {
-    var currentState: S?
-    let engine: Engine<S, E, O>
-
-    init(engine: Engine<S, E, O>) {
-      self.engine = engine
+    self.eventChannel = AsyncBufferedChannel<E>()
+    self.currentState = ManagedCriticalState(nil)
+    self.deinitBlock = {
+      runtime.channelReceivers.forEach { channelReceiver in
+        channelReceiver.update(receiver: nil)
+      }
+      onDeinit?()
     }
 
-    mutating func setCurrentState(_ state: S) async {
-      self.currentState = state
-      await self.engine.process(state: state)
-    }
+    self.engine = Engine(
+      resolveOutput: stateMachine.output(for:),
+      computeNextState: stateMachine.reduce(when:on:),
+      resolveSideEffect: runtime.sideEffects(for:),
+      eventMiddlewares: runtime.eventMiddlewares,
+      stateMiddlewares: runtime.stateMiddlewares
+    )
 
-    public mutating func next() async -> Element? {
-      let engine = self.engine
-
-      return await withTaskCancellationHandler {
-        guard let currentState = self.currentState else {
-          // early returning the initial state for first iteration
-          let initialState = self.engine.resolveInitialState()
-          await self.setCurrentState(initialState)
-          return self.currentState
-        }
-
-        var nextState: S?
-        while nextState == nil {
-          
-          guard !Task.isCancelled else { return nil }
-
-          // requesting the next event
-          guard let event = await self.engine.getEvent() else {
-            // should not happen since no one can finish the channel
-            return nil
-          }
-
-          // executing middlewares for the event
-          await self.engine.process(event: event)
-
-          // looking for the next non nil state according to transitions
-          nextState = await self.engine.computeNextState(currentState, event)
-        }
-
-        // cannot happen due to previous loop (TODO: should consider the notion of final state)
-        guard let nextState = nextState else {
-          self.currentState = nil
-          return nil
-        }
-
-        await self.setCurrentState(nextState)
-        return nextState
-      } onCancel: {
-        Task {
-          await engine.cancelTasksInProgress()
-          // TODO: not made to have multiple clients. if so, only the output state should be shared (side effects should remain centralized)
-        }
+    // As channals are retained as long as there is a sender using it,
+    // the receiver will also be retained.
+    // That is why it is necesssary to have a weak reference on the self here.
+    // Doing so, self will be deallocated event if a channel was using it as a receiver.
+    // Channels are resilient to nil receiver functions.
+    runtime.channelReceivers.forEach { channelReceiver in
+      channelReceiver.update { [weak self] event in
+        self?.send(event)
       }
     }
+  }
+
+  deinit {
+    self.eventChannel.finish()
+    self.deinitBlock()
+  }
+
+  @Sendable public func send(_ event: E) {
+    self.eventChannel.send(event)
+  }
+
+  public func makeAsyncIterator() -> AsyncIterator {
+    self
+      .eventChannel
+      .onEach { [weak self] event in await self?.engine.process(event:event) }
+      .compactScan(self.initialState, self.engine.computeNextState)
+      .serial()
+      .onEach { [weak self] state in await self?.engine.process(state: state, sendBackEvent: self?.send(_:)) }
+      .makeAsyncIterator()
   }
 }

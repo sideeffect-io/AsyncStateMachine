@@ -109,7 +109,7 @@ let stateMachine = StateMachine<State, Event, Output>(initial: State.s1(value: "
   }
 }
 
-final class AsyncStatMachineSequenceTests: XCTestCase {
+final class AsyncStateMachineSequenceTests: XCTestCase {
 //  func testPerformance() async {
 //    measure {
 //      let exp = expectation(description: "task")
@@ -127,6 +127,9 @@ final class AsyncStatMachineSequenceTests: XCTestCase {
 //  }
 
   func test_states_and_events_match_the_expected_flow() async {
+    let allReceived = expectation(description: "Events and States have been received")
+    allReceived.expectedFulfillmentCount = 3
+
     // Given
     let stateMachine = StateMachine<State, Event, Output>(initial: State.s1(value: "value")) {
       When(state: State.s1(value:)) { stateValue in
@@ -182,25 +185,40 @@ final class AsyncStatMachineSequenceTests: XCTestCase {
       }
     }
 
-    let receivedStates = ManagedCriticalState<[State]>([])
-    let receivedEvents = ManagedCriticalState<[Event]>([])
+    let receivedStatesInSequence = ManagedCriticalState<[State]>([])
+    let receivedStatesInMiddleware = ManagedCriticalState<[State]>([])
+    let receivedEventsInMiddleware = ManagedCriticalState<[Event]>([])
 
     let runtime = Runtime<State, Event, Output>()
       .map(output: Output.o1(value:), to: { _ in Event.e1(value: "") })
       .map(output: Output.o2(value:), to: { outputValue in Event.e4(value: outputValue) })
       .map(output: Output.o3(value:), to: { outputValue in Event.e6(value: outputValue) })
-      .register(middleware: { state in receivedStates.withCriticalRegion{ $0.append(state) } })
-      .register(middleware: { event in receivedEvents.withCriticalRegion{ $0.append(event) } })
+      .register(middleware: { (state: State) in
+        receivedStatesInMiddleware.withCriticalRegion { $0.append(state) }
+        if state == State.s7(value: "new value") {
+          allReceived.fulfill()
+        }
+      })
+      .register(middleware: { (event: Event) in
+        receivedEventsInMiddleware.withCriticalRegion { $0.append(event) }
+        if event == Event.e6(value: "new value") {
+          allReceived.fulfill()
+        }
+      })
 
     let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
 
     // When
-    for await state in sequence {
-      print(state)
-      if state == State.s7(value: "new value") {
-        break
+    Task {
+      for await state in sequence {
+        receivedStatesInSequence.withCriticalRegion { $0.append(state) }
+        if state == State.s7(value: "new value") {
+          allReceived.fulfill()
+        }
       }
     }
+
+    wait(for: [allReceived], timeout: 5.0)
 
     // Then
     let expectedStates = [
@@ -216,7 +234,152 @@ final class AsyncStatMachineSequenceTests: XCTestCase {
       Event.e6(value: "new value"),
     ]
 
-    XCTAssertEqual(receivedStates.criticalState, expectedStates)
-    XCTAssertEqual(receivedEvents.criticalState, expectedEvents)
+    XCTAssertEqual(receivedStatesInSequence.criticalState, expectedStates)
+    XCTAssertEqual(receivedStatesInMiddleware.criticalState, expectedStates)
+    XCTAssertEqual(receivedEventsInMiddleware.criticalState, expectedEvents)
+  }
+
+  func test_channel_connects_sender_and_receiver() {
+    // Given
+    let channel = Channel<Event>()
+    
+    let stateMachine1 = StateMachine<State, Event, Output>(initial: State.s1(value: "value")) {
+      When(state: State.s1(value:)) { _ in
+        Execute.noOutput
+      } transitions: { _ in
+        On(event: Event.e1(value:)) { _ in
+          Transition(to: State.s2(value: "value2"))
+        }
+      }
+    }
+
+    let receivedValue = ManagedCriticalState<String?>(nil)
+
+    let runtime1 = Runtime<State, Event, Output>()
+      .connectAsSender(to: channel, when: State.s2(value:), send: { value in
+        receivedValue.apply(criticalState: value)
+        return Event.e1(value: value)
+      })
+
+    let stateMachine2 = StateMachine<State, Event, Output>(initial: State.s1(value: "value")) {
+      When(state: State.s1(value:)) { _ in
+        Execute.noOutput
+      } transitions: { _ in
+        On(event: Event.e1(value:)) { _ in
+          Transition(to: State.s2(value: "value2"))
+        }
+      }
+    }
+
+    let runtime2 = Runtime<State, Event, Output>()
+      .connectAsReceiver(to: channel)
+
+    let asyncStateMachineSequence1 = AsyncStateMachineSequence(stateMachine: stateMachine1, runtime: runtime1)
+    let asyncStateMachineSequence2 = AsyncStateMachineSequence(stateMachine: stateMachine2, runtime: runtime2)
+
+    let firstStatesHaveBeenEmitted = expectation(description: "The first states have been emitted")
+    firstStatesHaveBeenEmitted.expectedFulfillmentCount = 2
+
+    let secondStatesHaveBeenEmitted = expectation(description: "The second states have been emitted")
+    secondStatesHaveBeenEmitted.expectedFulfillmentCount = 2
+
+    Task {
+      for await state in asyncStateMachineSequence1 {
+        if state == .s1(value: "value") {
+          firstStatesHaveBeenEmitted.fulfill()
+        }
+
+        if state == .s2(value: "value2") {
+          secondStatesHaveBeenEmitted.fulfill()
+        }
+      }
+    }
+
+    Task {
+      for await state in asyncStateMachineSequence2 {
+        if state == .s1(value: "value") {
+          firstStatesHaveBeenEmitted.fulfill()
+        }
+
+        if state == .s2(value: "value2") {
+          secondStatesHaveBeenEmitted.fulfill()
+        }
+      }
+    }
+
+    wait(for: [firstStatesHaveBeenEmitted], timeout: 1.0)
+
+    // When
+    asyncStateMachineSequence1.send(.e1(value: "value"))
+
+    // Then
+    wait(for: [secondStatesHaveBeenEmitted], timeout: 1.0)
+
+    XCTAssertEqual(receivedValue.criticalState, "value2")
+  }
+
+  func test_deinit_finishes_the_eventChannel() {
+    let asyncStateMachineSequenceIsDeinit = expectation(description: "The AasyncStateMachineSequence has been deinit")
+    let eventChannelIsFinished = expectation(description: "The underlying eventChannel has been finished")
+
+    let stateMachine = StateMachine<State, Event, Output>(initial: State.s1(value: "value")) {}
+    let runtime = Runtime<State, Event, Output>()
+
+    // Given
+    var sut: AsyncStateMachineSequence<State, Event, Output>? = AsyncStateMachineSequence(
+      stateMachine: stateMachine,
+      runtime: runtime,
+      onDeinit: { asyncStateMachineSequenceIsDeinit.fulfill() }
+    )
+
+    let eventChannel = sut!.eventChannel
+
+    Task {
+      for await _ in eventChannel {}
+      eventChannelIsFinished.fulfill()
+    }
+
+    // When
+    sut = nil
+
+    // Then
+    wait(for: [asyncStateMachineSequenceIsDeinit, eventChannelIsFinished], timeout: 1.0)
+    XCTAssertNil(sut)
+  }
+
+  func test_deinit_unregisters_asyncStateMachineSequence_from_channel_receivers() {
+    let asyncStateMachineSequenceIsDeinit = expectation(description: "on deinit")
+
+    let channel1 = Channel<Event>()
+    let channel2 = Channel<Event>()
+
+    // Given
+    let stateMachine = StateMachine<State, Event, Output>(initial: State.s1(value: "value")) {}
+
+    let runtime = Runtime<State, Event, Output>()
+      .connectAsReceiver(to: channel1)
+      .connectAsReceiver(to: channel2)
+
+    var sut: AsyncStateMachineSequence<State, Event, Output>? = AsyncStateMachineSequence(
+      stateMachine: stateMachine,
+      runtime: runtime,
+      onDeinit: { asyncStateMachineSequenceIsDeinit.fulfill() }
+    )
+
+    runtime.channelReceivers.forEach { receiver in
+      XCTAssertNotNil(receiver.receiver.criticalState)
+    }
+
+    // When
+    sut = nil
+
+    // Then
+    wait(for: [asyncStateMachineSequenceIsDeinit], timeout: 1.0)
+
+    runtime.channelReceivers.forEach { receiver in
+      XCTAssertNil(receiver.receiver.criticalState)
+    }
+
+    XCTAssertNil(sut)
   }
 }
