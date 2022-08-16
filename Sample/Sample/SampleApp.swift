@@ -10,7 +10,7 @@ import SwiftUI
 
 @main
 struct SampleApp: App {
-  @MainActor let viewState = ViewState(asyncSequence)
+  let viewState = ViewState(asyncStateMachineSequence: asyncSequence)
 
   var body: some Scene {
     WindowGroup {

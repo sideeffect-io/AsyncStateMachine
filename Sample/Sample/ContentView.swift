@@ -14,9 +14,7 @@ struct ContentView: View {
   var body: some View {
     Text(String(describing: self.viewState.state))
     Button {
-      Task {
-        await self.viewState.send(Event.loadingIsRequested)
-      }
+      self.viewState.send(Event.loadingIsRequested)
     } label: {
       Text("Load")
     }
@@ -27,7 +25,7 @@ struct ContentView: View {
 }
 
 struct ContentView_Previews: PreviewProvider {
-  @MainActor static let viewState = ViewState(asyncSequence)
+  static let viewState = ViewState(asyncStateMachineSequence: asyncSequence)
 
   static var previews: some View {
     ContentView(viewState: viewState)
