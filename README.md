@@ -22,6 +22,20 @@ let stateMachine = StateMachine(initial: .state1) {
 }
 ```
 
+## Installation
+
+```swift
+let package = Package(
+  name: "Example",
+  dependencies: [
+    .package(url: "https://github.com/sideeffect-io/AsyncStateMachine.git", .upToNextMajor(from: "0.0.1"))
+  ],
+  targets: [
+    .target(name: "Example", dependencies: ["AsyncStateMachine"])
+  ]
+)
+```
+
 ## Key points:
 - Each feature is a [Moore state machine](https://en.wikipedia.org/wiki/Moore_machine): no need for a global store
 - State machines are declarative: a DSL offers a natural and concise syntax
