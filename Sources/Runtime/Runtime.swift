@@ -89,7 +89,7 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
     let predicate: @Sendable (O) -> Bool = { currentOutput in
       currentOutput.matches(output)
     }
-    
+
     let sideEffect: @Sendable (O) -> AnyAsyncSequence<E>? = { currentOutput in
       if let outputAssociatedValue = currentOutput.associatedValue(expecting: OutputAssociatedValue.self) {
         return sideEffect(outputAssociatedValue).eraseToAnyAsyncSequence()
@@ -208,10 +208,10 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
     })
   }
 
-  @Sendable func sideEffects(for output: O) -> SideEffect<S, E, O>? {
+  @Sendable
+  func sideEffects(for output: O) -> SideEffect<S, E, O>? {
     self
       .sideEffects
       .first(where: { sideEffect in sideEffect.predicate(output) })
   }
 }
-

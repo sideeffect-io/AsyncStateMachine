@@ -1,4 +1,5 @@
 [![Build and test](https://github.com/sideeffect-io/AsyncStateMachine/actions/workflows/ci.yml/badge.svg)](https://github.com/sideeffect-io/AsyncStateMachine/actions/workflows/ci.yml)
+[![Lint](https://github.com/sideeffect-io/AsyncStateMachine/actions/workflows/lint.yml/badge.svg)](https://github.com/sideeffect-io/AsyncStateMachine/actions/workflows/lint.yml)
 
 # Async State Machine
 **Async State Machine** aims to provide a way to structure an application thanks to state machines. The goal is to identify the states and the side effects involved in each feature and to model them in a consistent and scalable way thanks to a DSL.
@@ -260,17 +261,13 @@ struct ContentView: View {
   var body: some View {
     VStack {
       Text(self.viewState.state.description)
-      Button { 
-        Task {
-          await self.viewState.send(Event.personsHaveEntered(persons: 1))
-        }
+      Button {
+        self.viewState.send(Event.personsHaveEntered(persons: 1))
       } label: { 
         Text("New person")
       }
-      Button { 
-        Task {
-          await self.viewState.send(Event.closeButtonWasPressed)
-        }
+      Button {
+        self.viewState.send(Event.closeButtonWasPressed)
       } label: { 
         Text("Close the door")
       }

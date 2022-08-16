@@ -101,7 +101,7 @@ where S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
   }
 }
 
-@resultBuilder 
+@resultBuilder
 public enum TransitionsBuilder<S, E>
 where S: DSLCompatible, E: DSLCompatible {
   public static func buildExpression(

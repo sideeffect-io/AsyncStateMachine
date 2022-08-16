@@ -12,7 +12,7 @@ extension AsyncSequence {
 }
 
 public final class AsyncSerialSequence<Base: AsyncSequence>: AsyncSequence, Sendable
-where Base: Sendable{
+where Base: Sendable {
   public typealias Element = Base.Element
   public typealias AsyncIterator = Iterator
 
@@ -28,7 +28,7 @@ where Base: Sendable{
       hasher.combine(self.id)
     }
 
-    static func ==(lhs: Token, rhs: Token) -> Bool {
+    static func == (lhs: Token, rhs: Token) -> Bool {
       lhs.id == rhs.id
     }
   }
@@ -55,84 +55,109 @@ where Base: Sendable{
     }
   }
 
+  func handleNextCancellation(
+    tokenId: Int,
+    isCancelled: ManagedCriticalState<Bool>
+  ) {
+    let continuation = self.state.withCriticalRegion { state -> UnsafeContinuation<Void, Never>? in
+      let continuation: UnsafeContinuation<Void, Never>?
+
+      switch state {
+      case .unlocked:
+        continuation = nil
+      case .locked(var tokens):
+        if tokens.isEmpty {
+          state = .unlocked
+          continuation = nil
+        } else {
+          let removed = tokens.remove(.placeHolder(id: tokenId))
+          state = .locked(tokens)
+          continuation = removed?.continuation
+        }
+      }
+
+      isCancelled.apply(criticalState: true)
+
+      return continuation
+    }
+
+    continuation?.resume()
+  }
+
+  func handleNextOperation(
+    tokenId: Int,
+    isCancelled: ManagedCriticalState<Bool>,
+    base: inout Base.AsyncIterator,
+    onImmediateResume: (() -> Void)? = nil,
+    onSuspend: (() -> Void)? = nil
+  ) async rethrows -> Element? {
+    await withUnsafeContinuation { [state] (continuation: UnsafeContinuation<Void, Never>) in
+      let continuation = state.withCriticalRegion { state -> UnsafeContinuation<Void, Never>? in
+        guard !isCancelled.criticalState else { return continuation }
+
+        switch state {
+        case .unlocked:
+          state = .locked([])
+          return continuation
+        case .locked(var continuations):
+          continuations.update(with: Token(id: tokenId, continuation: continuation))
+          state = .locked(continuations)
+          return nil
+        }
+      }
+
+      if let continuation = continuation {
+        continuation.resume()
+        onImmediateResume?()
+      } else {
+        onSuspend?()
+      }
+    }
+
+    let element = try await base.next()
+
+    let continuation = self.state.withCriticalRegion { state -> UnsafeContinuation<Void, Never>? in
+      switch state {
+      case .unlocked:
+        return nil
+      case .locked(var tokens):
+        if tokens.isEmpty {
+          state = .unlocked
+          return nil
+        } else {
+          let token = tokens.removeFirst()
+          state = .locked(tokens)
+          return token.continuation
+        }
+      }
+    }
+
+    continuation?.resume()
+
+    return element
+  }
+
   func next(
     _ base: inout Base.AsyncIterator,
     onImmediateResume: (() -> Void)? = nil,
     onSuspend: (() -> Void)? = nil
   ) async rethrows -> Element? {
-
     let tokenId = self.generateId()
     let isCancelled = ManagedCriticalState<Bool>(false)
 
-    return try await withTaskCancellationHandler {
-      let continuation = self.state.withCriticalRegion { state -> UnsafeContinuation<Void, Never>? in
-        let continuation: UnsafeContinuation<Void, Never>?
-
-        switch state {
-        case .unlocked:
-          continuation = nil
-        case .locked(var tokens):
-          if tokens.isEmpty {
-            state = .unlocked
-            continuation = nil
-          } else {
-            let removed = tokens.remove(.placeHolder(id: tokenId))
-            state = .locked(tokens)
-            continuation = removed?.continuation
-          }
-        }
-
-        isCancelled.apply(criticalState: true)
-
-        return continuation
-      }
-
-      continuation?.resume()
-    } operation: {
-      await withUnsafeContinuation { [state] (continuation: UnsafeContinuation<Void, Never>) in
-        let continuation = state.withCriticalRegion { state -> UnsafeContinuation<Void, Never>? in
-          guard !isCancelled.criticalState else { return continuation }
-
-          switch state {
-          case .unlocked:
-            state = .locked([])
-            return continuation
-          case .locked(var continuations):
-            continuations.update(with: Token(id: tokenId, continuation: continuation))
-            state = .locked(continuations)
-            return nil
-          }
-        }
-
-        if let continuation = continuation {
-          continuation.resume()
-          onImmediateResume?()
-        } else {
-          onSuspend?()
-        }
-      }
-
-      let element = try await base.next()
-
-      let continuation = self.state.withCriticalRegion { state -> UnsafeContinuation<Void, Never>? in
-        switch state {
-        case .unlocked:
-          return nil
-        case .locked(var tokens):
-          if tokens.isEmpty {
-            state = .unlocked
-            return nil
-          } else {
-            let token = tokens.removeFirst()
-            state = .locked(tokens)
-            return token.continuation
-          }
-        }
-      }
-
-      continuation?.resume()
-
-      return element
+    return try await withTaskCancellationHandler { [weak self] in
+      self?.handleNextCancellation(
+        tokenId: tokenId,
+        isCancelled: isCancelled
+      )
+    } operation: { [weak self] in
+      try await self?.handleNextOperation(
+        tokenId: tokenId,
+        isCancelled: isCancelled,
+        base: &base,
+        onImmediateResume: onImmediateResume,
+        onSuspend: onSuspend
+      )
     }
   }
 

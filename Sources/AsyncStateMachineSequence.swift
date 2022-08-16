@@ -61,14 +61,15 @@ where S: DSLCompatible & Sendable, E: DSLCompatible & Sendable, O: DSLCompatible
     self.deinitBlock()
   }
 
-  @Sendable public func send(_ event: E) {
+  @Sendable
+  public func send(_ event: E) {
     self.eventChannel.send(event)
   }
 
   public func makeAsyncIterator() -> AsyncIterator {
     self
       .eventChannel
-      .onEach { [weak self] event in await self?.engine.process(event:event) }
+      .onEach { [weak self] event in await self?.engine.process(event: event) }
       .compactScan(self.initialState, self.engine.computeNextState)
       .serial()
       .onEach { [weak self] state in await self?.engine.process(state: state, sendBackEvent: self?.send(_:)) }

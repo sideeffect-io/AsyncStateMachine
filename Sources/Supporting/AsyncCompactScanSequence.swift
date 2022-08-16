@@ -49,7 +49,7 @@ where R: Sendable, Base: Sendable {
         return self.accumulator
       }
 
-      var result: R? = nil
+      var result: R?
 
       while result == nil {
         guard let element = try await self.baseIterator.next() else {

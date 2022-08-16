@@ -5,7 +5,6 @@
 //  Created by Thibault WITTEMBERG on 25/06/2022.
 //
 
-
 public struct ExecutionStrategy<S>: Sendable, Equatable
 where S: DSLCompatible {
   enum Identifier {
