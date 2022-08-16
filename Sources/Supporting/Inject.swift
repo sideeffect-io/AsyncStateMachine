@@ -5,6 +5,7 @@
 //  Created by Thibault WITTEMBERG on 25/06/2022.
 //
 
+// swiftlint:disable identifier_name void_return function_parameter_count
 public func inject<A, R>(
     dep a: A,
     in block: @escaping (A) async -> R

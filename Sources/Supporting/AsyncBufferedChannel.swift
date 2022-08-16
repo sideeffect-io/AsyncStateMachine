@@ -22,7 +22,7 @@ where Element: Sendable {
       hasher.combine(self.id)
     }
 
-    static func ==(lhs: Awaiting, rhs: Awaiting) -> Bool {
+    static func == (lhs: Awaiting, rhs: Awaiting) -> Bool {
       lhs.id == rhs.id
     }
   }
@@ -70,7 +70,7 @@ where Element: Sendable {
   func send(_ value: Value) {
     let decision = self.state.withCriticalRegion { state -> SendDecision in
       switch state {
-      case .active(var queue, var awaitings):
+      case var .active(queue, awaitings):
         if !awaitings.isEmpty {
           switch value {
           case .element(let element):
@@ -101,7 +101,7 @@ where Element: Sendable {
       break
     case .terminate(let awaitings):
       awaitings.forEach { $0.continuation?.resume(returning: nil) }
-    case .resume(let awaiting, let element):
+    case let .resume(awaiting, element):
       awaiting.continuation?.resume(returning: element)
     }
   }
@@ -138,7 +138,7 @@ where Element: Sendable {
           guard !cancellation.criticalState else { return .resume(nil) }
 
           switch state {
-          case .active(var queue, var awaitings):
+          case var .active(queue, awaitings):
             if !queue.isEmpty {
               let value = queue.removeFirst()
               switch value {
@@ -163,7 +163,6 @@ where Element: Sendable {
         case .resume(let element): continuation.resume(returning: element)
         case .suspend:
           onSuspend?()
-          break
         }
       }
     }

@@ -61,7 +61,6 @@ public extension DSLCompatible {
     return memcmp(&me, &other, MemoryLayout<Self>.size) == 0 || me.label == other.label
   }
 
-
   /// Determines if `self` matches an enum case signature that has associated values.
   ///
   /// ```
@@ -94,8 +93,8 @@ public extension DSLCompatible {
   /// - Returns: the value of the associated type when `self` matches the given enum signature, nil otherwise.
   func associatedValue<AssociatedValue>(matching definition: (AssociatedValue) -> Self) -> AssociatedValue? {
     guard
-      let me: (path: [String?], associatedValue: AssociatedValue) = decompose(expecting: AssociatedValue.self),
-      let other: (path: [String?], associatedValue: AssociatedValue) = definition(me.associatedValue).decompose(expecting: AssociatedValue.self),
+      let me = decompose(expecting: AssociatedValue.self),
+      let other = definition(me.associatedValue).decompose(expecting: AssociatedValue.self),
       me.path == other.path else { return nil }
     return me.associatedValue
   }

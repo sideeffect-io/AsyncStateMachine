@@ -9,7 +9,7 @@
 import XCTestDynamicOverlay
 
 public class XCTStateMachine<S, E, O>
-where 
+where
 S: DSLCompatible & Equatable,
 E: DSLCompatible & Equatable,
 O: DSLCompatible & Equatable {

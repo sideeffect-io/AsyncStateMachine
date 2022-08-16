@@ -8,11 +8,11 @@
 public struct OneOf<T>: Sendable
 where T: DSLCompatible {
     let predicate: @Sendable (T) -> Bool
-    
+
     init(predicate: @escaping @Sendable (T) -> Bool) {
         self.predicate = predicate
     }
-    
+
     public init(@OneOfBuilder<T> _ oneOf: () -> OneOf<T>) {
         self = oneOf()
     }
@@ -28,7 +28,7 @@ where T: DSLCompatible {
             input.matches(expression)
         }
     }
-    
+
     public static func buildExpression<AssociatedValue>(
         _ expression: @escaping (AssociatedValue) -> T
     ) -> (T) -> Bool {
@@ -36,7 +36,7 @@ where T: DSLCompatible {
             input.matches(expression)
         }
     }
-    
+
     public static func buildBlock(_ components: ((T) -> Bool)...) -> OneOf<T> {
         OneOf(predicate: { input in components.contains { $0(input) } })
     }
