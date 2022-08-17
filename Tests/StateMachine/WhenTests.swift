@@ -66,6 +66,8 @@ final class WhenTests: XCTestCase {
     // Then
     XCTAssertEqual(receivedTransitionsFromExpectedState.count, 1)
     XCTAssertEqual(receivedStateInTransitions.criticalState, expectedState)
+    let receivedNewState = await receivedTransitionsFromExpectedState.first?.transition(Event.e1)
+    XCTAssertEqual(receivedNewState, .s3)
   }
 
   func test_init_sets_predicate_output_and_transitions_when_passing_oneOf_and_execute() async {
@@ -139,6 +141,8 @@ final class WhenTests: XCTestCase {
     // Then
     XCTAssertEqual(receivedTransitionsFromExpectedState.count, 1)
     XCTAssertEqual(receivedStateInTransitions.criticalState, expectedState)
+    let receivedNewState = await receivedTransitionsFromExpectedState.first?.transition(Event.e1)
+    XCTAssertEqual(receivedNewState, .s3)
   }
 
   func test_init_sets_predicate_output_and_transitions_when_passing_state_and_execute() async {
@@ -213,6 +217,8 @@ final class WhenTests: XCTestCase {
     XCTAssertTrue(receivedTransitionsFromUnexpectedState.isEmpty)
     XCTAssertEqual(receivedTransitionsFromExpectedState.count, 1)
     XCTAssertEqual(receivedValueInTransitions.criticalState, expectedValue)
+    let receivedNewState = await receivedTransitionsFromExpectedState.first?.transition(Event.e1)
+    XCTAssertEqual(receivedNewState, .s3)
   }
 
   func test_init_sets_predicate_output_and_transitions_when_passing_state_with_associated_value_and_execute() async {

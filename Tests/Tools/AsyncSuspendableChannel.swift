@@ -85,13 +85,10 @@ final class AsyncSuspendableChannel<Element>: AsyncSequence, Sendable where Elem
       switch state {
       case .finished:
         return nil
-      case .awaitingConsumer:
-        state = .awaitingConsumer(newElement)
-        return nil
       case .awaitingProducer(let continuation):
         state = .idle
         return continuation
-      case .idle:
+      case .idle, .awaitingConsumer:
         state = .awaitingConsumer(newElement)
         return nil
       }

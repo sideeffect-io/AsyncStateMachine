@@ -147,8 +147,15 @@ final class RuntimeTests: XCTestCase {
     let sideEffect = sut.sideEffects.first!
 
     // Then
-    let sequence = sideEffect.execute(Output.o3(value: 3))
-    XCTAssertNil(sequence)
+    let sequenceNoMatch = sideEffect.execute(Output.o3(value: 3))
+    XCTAssertNil(sequenceNoMatch)
+
+    let sequenceMatch = sideEffect.execute(Output.o2(value: "3"))
+    XCTAssertNotNil(sequenceMatch)
+    
+    for try await event in sequenceMatch.unsafelyUnwrapped {
+      XCTAssertEqual(event, .e1)
+    }
   }
 
   func test_register_adds_middleware_for_state_when_called() async {

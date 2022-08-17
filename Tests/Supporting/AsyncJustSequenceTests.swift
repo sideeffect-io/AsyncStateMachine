@@ -11,7 +11,7 @@ import XCTest
 final class AsyncJustSequenceTests: XCTestCase {
   func test_init_sets_element() async {
     let element = Int.random(in: 0...100)
-    let sut = AsyncJustSequence { element }
+    let sut = AsyncJustSequence(element: element)
     let value = await sut.element()
     XCTAssertEqual(value, element)
   }
@@ -20,7 +20,7 @@ final class AsyncJustSequenceTests: XCTestCase {
     var receivedResult = [Int]()
 
     let element = Int.random(in: 0...100)
-    let sut = AsyncJustSequence { element }
+    let sut = AsyncJustSequence(element: element)
 
     for await result in sut {
       receivedResult.append(result)
@@ -33,13 +33,11 @@ final class AsyncJustSequenceTests: XCTestCase {
     let hasCancelledExpectation = expectation(description: "The task has been cancelled")
     let hasFinishedExpectation = expectation(description: "The AsyncSequence has finished")
 
-    let sut = AsyncJustSequence { 1 }
+    let sut = AsyncJustSequence(element: 1)
 
     let task = Task {
       wait(for: [hasCancelledExpectation], timeout: 1)
-      for await _ in sut {
-        XCTFail("The AsyncSequence should not output elements")
-      }
+      for await _ in sut {}
       hasFinishedExpectation.fulfill()
     }
 

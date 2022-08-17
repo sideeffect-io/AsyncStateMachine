@@ -28,10 +28,10 @@ struct AsyncLazySequence<Base: Sequence>: AsyncSequence {
     mutating func next() async -> Base.Element? {
       if !Task.isCancelled, let value = iterator?.next() {
         return value
-      } else {
-        iterator = nil
-        return nil
       }
+
+      iterator = nil
+      return nil
     }
   }
 }

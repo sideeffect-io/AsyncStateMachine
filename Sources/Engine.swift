@@ -40,6 +40,13 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
 
   @discardableResult
   func register(
+    taskInProgress task: Task<Void, Never>
+  ) -> Task<Void, Never> {
+    self.register(taskInProgress: task, cancelOn: { _ in false })
+  }
+
+  @discardableResult
+  func register(
     taskInProgress task: Task<Void, Never>,
     cancelOn predicate: @Sendable @escaping (S) -> Bool
   ) -> Task<Void, Never> {
@@ -84,7 +91,9 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
     self
       .tasksInProgress
       .values
-      .forEach { taskInProgress in taskInProgress.task.cancel() }
+      .forEach { taskInProgress in
+        taskInProgress.task.cancel()
+      }
 
     self.removeTasksInProgress()
   }
@@ -139,10 +148,7 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
       }
 
       // middlewares are not cancelled on any specific state
-      let removeTaskInProgressTask = self.register(
-        taskInProgress: task,
-        cancelOn: { _ in false }
-      )
+      let removeTaskInProgressTask = self.register(taskInProgress: task)
       removeTaskInProgressTasks.append(removeTaskInProgressTask)
     }
 
@@ -157,6 +163,7 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
     guard
       let output = self.resolveOutput(state),
       let sideEffect = self.resolveSideEffect(output),
+      sideEffect.predicate(output),
       let events = sideEffect.execute(output) else { return nil }
 
     let task: Task<Void, Never> = Task(priority: sideEffect.priority) {

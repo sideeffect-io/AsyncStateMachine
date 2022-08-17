@@ -11,7 +11,7 @@ import XCTest
 final class AsyncSerialSequenceTests: XCTestCase {
   func test_asyncSerialSequence_forwards_element_from_base_and_finishes_when_base_finishes() async {
     // Given
-    let sut = AsyncJustSequence { 1 }
+    let sut = AsyncJustSequence(element: 1)
       .serial()
 
     // When
@@ -26,7 +26,7 @@ final class AsyncSerialSequenceTests: XCTestCase {
 
   func test_asyncSerialSequence_returns_nil_when_pastEnd() async {
     // Given
-    let sut = AsyncJustSequence { 1 }
+    let sut = AsyncJustSequence(element: 1)
       .serial()
 
     // When
@@ -70,7 +70,7 @@ final class AsyncSerialSequenceTests: XCTestCase {
     let secondIterationHasFinished = expectation(description: "The second iteration has finished with a nil element")
     let firstIterationHasFinished = expectation(description: "The first iteration has finished with a nil element")
 
-    // When: running to concurrent iterations
+    // When: running two concurrent iterations
     Task {
       var iterator = base.makeAsyncIterator()
       while let element = await sut.next(
@@ -91,11 +91,7 @@ final class AsyncSerialSequenceTests: XCTestCase {
 
     Task {
       var iterator = base.makeAsyncIterator()
-      while let element = await sut.next(&iterator, onSuspend: { secondIterationHasSuspended.fulfill() }) {
-        received.withCriticalRegion { state in
-          state.append(element)
-        }
-      }
+      while let _ = await sut.next(&iterator, onSuspend: { secondIterationHasSuspended.fulfill() }) {}
       secondIterationHasFinished.fulfill()
     }
 
@@ -170,6 +166,7 @@ final class AsyncSerialSequenceTests: XCTestCase {
     wait(for: [iteration2HasSuspended, iteration3HasSuspended, iteration4HasSuspended], timeout: 1.0)
 
     base.finish()
+    base.unsuspend(1)
 
     // Then: all suspended iterations are finished
     wait(for: [iteration1HasFinished, iteration2HasFinished, iteration3HasFinished, iteration4HasFinished], timeout: 1.0)
