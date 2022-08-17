@@ -1,11 +1,11 @@
 //
-//  ViewState.swift
+//  ViewStateMachine.swift
 //
 //
 //  Created by Thibault WITTEMBERG on 02/07/2022.
 //
 
-public class ViewState<S, E, O>: ObservableObject
+public class ViewStateMachine<S, E, O>: ObservableObject
 where S: DSLCompatible & Equatable, E: DSLCompatible, O: DSLCompatible {
   @Published public var state: S
 
@@ -86,7 +86,7 @@ where S: DSLCompatible & Equatable, E: DSLCompatible, O: DSLCompatible {
 #if canImport(SwiftUI)
 import SwiftUI
 
-public extension ViewState {
+public extension ViewStateMachine {
   func binding(send event: @escaping (S) -> E) -> Binding<S> {
     Binding {
       self.state
