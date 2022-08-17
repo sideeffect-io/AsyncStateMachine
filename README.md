@@ -150,10 +150,10 @@ let runtime = Runtime<State, Event, Output>()
   .register(middleware: { (event: Event) in print("Event: \(event)") })
 ```
 
-The `AsyncStateMachineSequence` can then be instantiated:
+The `AsyncStateMachine` can then be instantiated:
 
 ```swift
-let sequence = AsyncStateMachineSequence(
+let sequence = AsyncStateMachine(
   stateMachine: stateMachine,
   runtime: runtime
 )
@@ -176,12 +176,12 @@ await sequence.send(Event.personsHaveEntered(persons: 3))
 
 - Side effects are `async` functions executed in the context of `Tasks`.
 - Task priority can be set in the Runtime: `.map(output: Output.close(speed:), to: close(speed:), priority: .high)`.
-- Collaborative task cancellation applies: when an AsyncStateMachineSequence is deinit, all the pending side effect tasks will be marked as cancelled.
+- Collaborative task cancellation applies: when an `AsyncStateMachine` is deinit, all the pending side effect tasks will be marked as cancelled.
 
 ### Async sequence
 
-- `AsyncStateMachineSequence` benefits from all the operators associated to `AsyncSequence` (`map`, `filter`, …). (See also [swift async algorithms](https://github.com/apple/swift-async-algorithms))
-- `AsyncStateMachineSequence` is compliant with a multiple producer / multiple consumer mode in a concurrent mode. Although to output is not shared (meaning each consumer will receive the successive versions of the state), the transitions are guaranteed concurrent-safe.
+- `AsyncStateMachine` benefits from all the operators associated to `AsyncSequence` (`map`, `filter`, …). (See also [swift async algorithms](https://github.com/apple/swift-async-algorithms))
+- `AsyncStateMachine` is compliant with a multiple producer / multiple consumer mode in a concurrent mode. Although to output is not shared (meaning each consumer will receive the successive versions of the state), the transitions are guaranteed concurrent-safe.
 
 ## How to inject dependencies?
 
@@ -265,53 +265,53 @@ XCTStateMachine(stateMachine)
 
 ## Using Async State Machine with SwiftUI and UIKit
 
-No matter the UI framework you use, rendering a user interface is about interpreting a state. You can use an `AsyncStateMachineSequence` as a reliable state factory, exposing the state with the provided `ViewState`.
+No matter the UI framework you use, rendering a user interface is about interpreting a state. You can use an `AsyncStateMachine` as a reliable state factory. `ViewStateMachine` is a handy wrapper around `AsyncStateMachine` that eases the consumption of the state from a UI perspective.
 
 A simple and naive SwiftUI usage could be:
 
 ```swift
 struct ContentView: View {
-  @ObservedObject viewState: ViewState<State, Event, Output>
+  @ObservedObject viewStateMachine: ViewStateMachine<State, Event, Output>
 
   var body: some View {
     VStack {
-      Text(self.viewState.state.description)
+      Text(self.viewStateMachine.state.description)
       Button {
-        self.viewState.send(Event.personsHaveEntered(persons: 1))
+        self.viewStateMachine.send(Event.personsHaveEntered(persons: 1))
       } label: { 
         Text("New person")
       }
       Button {
-        self.viewState.send(Event.closeButtonWasPressed)
+        self.viewStateMachine.send(Event.closeButtonWasPressed)
       } label: { 
         Text("Close the door")
       }
     }.task {
-      await viewState.start()
+      await self.viewStateMachine.start()
     }
   }
 }
 
 …
 
-let viewState = ViewState(myAsyncStateMachine)
-ContentView(viewState: viewState)
+let viewStateMachine = ViewStateMachine(asyncStateMachine: myAsyncStateMachine)
+ContentView(viewStateMachine: viewStateMachine)
 ```
 
 With UIKit, a simple and naive approach would be:
 
 ```swift
 let task: Task<Void, Never>!
-let viewState: ViewState<State, Event, Output>!
+let viewStateMachine: ViewStateMachine<State, Event, Output>!
 let cancellable = AnyCancellable()
 
 override func viewDidLoad() {
   super.viewDidLoad()
   self.task = Task { [weak self] in
-    await self?.viewState.start()
+    await self?.viewStateMachine.start()
   }
   
-  self.cancellable = self.viewState.$state.sink { [weak self] state in
+  self.cancellable = self.viewStateMachine.$state.sink { [weak self] state in
   	self?.render(state: state)
   }
 }
@@ -332,7 +332,7 @@ func deinit() {
 Allows to send an event while awaiting for a specific state or set of states to resume.
 
 ```swift
-await viewState.send(
+await viewStateMachine.send(
   .closeButtonWasPressed,
   resumeWhen: .closed
 )`
@@ -372,13 +372,13 @@ When(states: OneOf {
 Allows to create a SwiftUI binding on the current state, sending an Event when the binding changes.
 
 ```swift
-self.viewState.binding(send: .closeButtonWasPressed)
+self.viewStateMachine.binding(send: .closeButtonWasPressed)
 ```
 
 Allows to create a SwiftUI binding on a property of the current state, sending an Event when the binding changes.
 
 ```swift
-self.viewState.binding(keypath: \.persons, send: .closeButtonWasPressed)
+self.viewStateMachine.binding(keypath: \.persons, send: .closeButtonWasPressed)
 ```
 
 ### Connecting two state machines

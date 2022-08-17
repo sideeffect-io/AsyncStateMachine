@@ -46,8 +46,8 @@ final class ViewStateMachineTests: XCTestCase {
         eventWasReceived.fulfill()
       })
 
-    let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
-    let sut = ViewStateMachine(asyncStateMachineSequence: sequence)
+    let sequence = AsyncStateMachine(stateMachine: stateMachine, runtime: runtime)
+    let sut = ViewStateMachine(asyncStateMachine: sequence)
 
     Task {
       await sut.start()
@@ -85,8 +85,8 @@ final class ViewStateMachineTests: XCTestCase {
     let runtime = Runtime<State, Event, Output>()
       .map(output: .o1, to: { Event.e2 })
 
-    let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
-    let sut = ViewStateMachine(asyncStateMachineSequence: sequence)
+    let sequence = AsyncStateMachine(stateMachine: stateMachine, runtime: runtime)
+    let sut = ViewStateMachine(asyncStateMachine: sequence)
 
     Task {
       await sut.start()
@@ -122,8 +122,8 @@ final class ViewStateMachineTests: XCTestCase {
     let runtime = Runtime<State, Event, Output>()
       .map(output: .o1, to: { Event.e2 })
 
-    let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
-    let sut = ViewStateMachine(asyncStateMachineSequence: sequence)
+    let sequence = AsyncStateMachine(stateMachine: stateMachine, runtime: runtime)
+    let sut = ViewStateMachine(asyncStateMachine: sequence)
 
     Task {
       await sut.start()
@@ -159,8 +159,8 @@ final class ViewStateMachineTests: XCTestCase {
     let runtime = Runtime<State, Event, Output>()
       .map(output: .o1, to: { Event.e2 })
 
-    let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
-    let sut = ViewStateMachine(asyncStateMachineSequence: sequence)
+    let sequence = AsyncStateMachine(stateMachine: stateMachine, runtime: runtime)
+    let sut = ViewStateMachine(asyncStateMachine: sequence)
 
     Task {
       await sut.start()
@@ -196,8 +196,8 @@ final class ViewStateMachineTests: XCTestCase {
     let runtime = Runtime<State, Event, Output>()
       .map(output: .o1, to: { Event.e2 })
 
-    let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
-    let sut = ViewStateMachine(asyncStateMachineSequence: sequence)
+    let sequence = AsyncStateMachine(stateMachine: stateMachine, runtime: runtime)
+    let sut = ViewStateMachine(asyncStateMachine: sequence)
 
     Task {
       await sut.start()
@@ -224,8 +224,8 @@ final class ViewStateMachineTests: XCTestCase {
         eventWasReceived.fulfill()
       })
 
-    let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
-    let sut = ViewStateMachine(asyncStateMachineSequence: sequence)
+    let sequence = AsyncStateMachine(stateMachine: stateMachine, runtime: runtime)
+    let sut = ViewStateMachine(asyncStateMachine: sequence)
 
     Task {
       await sut.start()
@@ -259,8 +259,8 @@ final class ViewStateMachineTests: XCTestCase {
         eventWasReceived.fulfill()
       })
 
-    let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
-    let sut = ViewStateMachine(asyncStateMachineSequence: sequence)
+    let sequence = AsyncStateMachine(stateMachine: stateMachine, runtime: runtime)
+    let sut = ViewStateMachine(asyncStateMachine: sequence)
 
     Task {
       await sut.start()
@@ -299,8 +299,8 @@ final class ViewStateMachineTests: XCTestCase {
         eventWasReceived.fulfill()
       })
 
-    let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
-    let sut = ViewStateMachine(asyncStateMachineSequence: sequence)
+    let sequence = AsyncStateMachine(stateMachine: stateMachine, runtime: runtime)
+    let sut = ViewStateMachine(asyncStateMachine: sequence)
 
     Task {
       await sut.start()
@@ -343,8 +343,8 @@ final class ViewStateMachineTests: XCTestCase {
         eventWasReceived.fulfill()
       })
 
-    let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
-    let sut = ViewStateMachine(asyncStateMachineSequence: sequence)
+    let sequence = AsyncStateMachine(stateMachine: stateMachine, runtime: runtime)
+    let sut = ViewStateMachine(asyncStateMachine: sequence)
 
     Task {
       await sut.start()

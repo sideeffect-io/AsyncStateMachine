@@ -1,3 +1,10 @@
+//
+//  AsyncStateMachineTests.swift
+//
+//
+//  Created by Thibault WITTEMBERG on 20/06/2022.
+//
+
 @testable import AsyncStateMachine
 import XCTest
 
@@ -71,7 +78,7 @@ enum Output: DSLCompatible, Equatable {
   case o3(value: String)
 }
 
-final class AsyncStateMachineSequenceTests: XCTestCase {
+final class AsyncStateMachineTests: XCTestCase {
 //  func testPerformance() async {
 //  let stateMachine = StateMachine<State, Event, Output>(initial: State.s1(value: "s1")) {
 //    When(states: OneOf {
@@ -187,7 +194,7 @@ final class AsyncStateMachineSequenceTests: XCTestCase {
         }
       })
 
-    let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
+    let sequence = AsyncStateMachine(stateMachine: stateMachine, runtime: runtime)
 
     // When
     Task {
@@ -255,8 +262,8 @@ final class AsyncStateMachineSequenceTests: XCTestCase {
     let runtime2 = Runtime<State, Event, Output>()
       .connectAsReceiver(to: channel)
 
-    let asyncStateMachineSequence1 = AsyncStateMachineSequence(stateMachine: stateMachine1, runtime: runtime1)
-    let asyncStateMachineSequence2 = AsyncStateMachineSequence(stateMachine: stateMachine2, runtime: runtime2)
+    let asyncStateMachineSequence1 = AsyncStateMachine(stateMachine: stateMachine1, runtime: runtime1)
+    let asyncStateMachineSequence2 = AsyncStateMachine(stateMachine: stateMachine2, runtime: runtime2)
 
     let firstStatesHaveBeenEmitted = expectation(description: "The first states have been emitted")
     firstStatesHaveBeenEmitted.expectedFulfillmentCount = 2
@@ -307,7 +314,7 @@ final class AsyncStateMachineSequenceTests: XCTestCase {
     let runtime = Runtime<State, Event, Output>()
 
     // Given
-    var sut: AsyncStateMachineSequence<State, Event, Output>? = AsyncStateMachineSequence(
+    var sut: AsyncStateMachine<State, Event, Output>? = AsyncStateMachine(
       stateMachine: stateMachine,
       runtime: runtime,
       onDeinit: { asyncStateMachineSequenceIsDeinit.fulfill() }
@@ -341,7 +348,7 @@ final class AsyncStateMachineSequenceTests: XCTestCase {
       .connectAsReceiver(to: channel1)
       .connectAsReceiver(to: channel2)
 
-    var sut: AsyncStateMachineSequence<State, Event, Output>? = AsyncStateMachineSequence(
+    var sut: AsyncStateMachine<State, Event, Output>? = AsyncStateMachine(
       stateMachine: stateMachine,
       runtime: runtime,
       onDeinit: { asyncStateMachineSequenceIsDeinit.fulfill() }
