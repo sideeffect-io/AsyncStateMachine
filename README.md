@@ -1,5 +1,6 @@
 [![Build and test](https://github.com/sideeffect-io/AsyncStateMachine/actions/workflows/ci.yml/badge.svg)](https://github.com/sideeffect-io/AsyncStateMachine/actions/workflows/ci.yml)
 [![Lint](https://github.com/sideeffect-io/AsyncStateMachine/actions/workflows/lint.yml/badge.svg)](https://github.com/sideeffect-io/AsyncStateMachine/actions/workflows/lint.yml)
+[![Codecov](https://codecov.io/gh/sideeffect-io/AsyncStateMachine/branch/main/graph/badge.svg?token=CRAZF1LOM9)](https://codecov.io/gh/sideeffect-io/AsyncStateMachine)
 
 # Async State Machine
 **Async State Machine** aims to provide a way to structure an application thanks to state machines. The goal is to identify the states and the side effects involved in each feature and to model them in a consistent and scalable way thanks to a DSL.
