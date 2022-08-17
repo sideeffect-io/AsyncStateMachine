@@ -9,25 +9,27 @@ import AsyncStateMachine
 import SwiftUI
 
 struct ContentView: View {
-  @ObservedObject var viewState: ViewState<State, Event, Output>
+  @ObservedObject var viewStateMachine: ViewStateMachine<State, Event, Output>
 
   var body: some View {
-    Text(String(describing: self.viewState.state))
+    Text(String(describing: self.viewStateMachine.state))
     Button {
-      self.viewState.send(Event.loadingIsRequested)
+      self.viewStateMachine.send(Event.loadingIsRequested)
     } label: {
       Text("Load")
     }
     .task {
-      await viewState.start()
+      await self.viewStateMachine.start()
     }
   }
 }
 
 struct ContentView_Previews: PreviewProvider {
-  static let viewState = ViewState(asyncStateMachineSequence: asyncSequence)
+  static let viewStateMachine = ViewStateMachine(
+    asyncStateMachineSequence: asyncSequence
+  )
 
   static var previews: some View {
-    ContentView(viewState: viewState)
+    ContentView(viewStateMachine: viewStateMachine)
   }
 }

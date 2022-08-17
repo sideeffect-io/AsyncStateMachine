@@ -1,5 +1,5 @@
 //
-//  BindingsTests.swift
+//  ViewStateMachineTests.swift
 //
 //
 //  Created by Thibault WITTEMBERG on 20/06/2022.
@@ -9,7 +9,7 @@
 @testable import AsyncStateMachine
 import XCTest
 
-final class ViewStateTests: XCTestCase {
+final class ViewStateMachineTests: XCTestCase {
   enum State: DSLCompatible, Equatable {
     case s1
     case s2
@@ -47,7 +47,7 @@ final class ViewStateTests: XCTestCase {
       })
 
     let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
-    let sut = ViewState(asyncStateMachineSequence: sequence)
+    let sut = ViewStateMachine(asyncStateMachineSequence: sequence)
 
     Task {
       await sut.start()
@@ -86,7 +86,7 @@ final class ViewStateTests: XCTestCase {
       .map(output: .o1, to: { Event.e2 })
 
     let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
-    let sut = ViewState(asyncStateMachineSequence: sequence)
+    let sut = ViewStateMachine(asyncStateMachineSequence: sequence)
 
     Task {
       await sut.start()
@@ -123,7 +123,7 @@ final class ViewStateTests: XCTestCase {
       .map(output: .o1, to: { Event.e2 })
 
     let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
-    let sut = ViewState(asyncStateMachineSequence: sequence)
+    let sut = ViewStateMachine(asyncStateMachineSequence: sequence)
 
     Task {
       await sut.start()
@@ -160,7 +160,7 @@ final class ViewStateTests: XCTestCase {
       .map(output: .o1, to: { Event.e2 })
 
     let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
-    let sut = ViewState(asyncStateMachineSequence: sequence)
+    let sut = ViewStateMachine(asyncStateMachineSequence: sequence)
 
     Task {
       await sut.start()
@@ -197,7 +197,7 @@ final class ViewStateTests: XCTestCase {
       .map(output: .o1, to: { Event.e2 })
 
     let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
-    let sut = ViewState(asyncStateMachineSequence: sequence)
+    let sut = ViewStateMachine(asyncStateMachineSequence: sequence)
 
     Task {
       await sut.start()
@@ -225,7 +225,7 @@ final class ViewStateTests: XCTestCase {
       })
 
     let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
-    let sut = ViewState(asyncStateMachineSequence: sequence)
+    let sut = ViewStateMachine(asyncStateMachineSequence: sequence)
 
     Task {
       await sut.start()
@@ -260,7 +260,7 @@ final class ViewStateTests: XCTestCase {
       })
 
     let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
-    let sut = ViewState(asyncStateMachineSequence: sequence)
+    let sut = ViewStateMachine(asyncStateMachineSequence: sequence)
 
     Task {
       await sut.start()
@@ -300,7 +300,7 @@ final class ViewStateTests: XCTestCase {
       })
 
     let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
-    let sut = ViewState(asyncStateMachineSequence: sequence)
+    let sut = ViewStateMachine(asyncStateMachineSequence: sequence)
 
     Task {
       await sut.start()
@@ -344,7 +344,7 @@ final class ViewStateTests: XCTestCase {
       })
 
     let sequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
-    let sut = ViewState(asyncStateMachineSequence: sequence)
+    let sut = ViewStateMachine(asyncStateMachineSequence: sequence)
 
     Task {
       await sut.start()

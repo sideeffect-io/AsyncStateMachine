@@ -10,11 +10,11 @@ import SwiftUI
 
 @main
 struct SampleApp: App {
-  let viewState = ViewState(asyncStateMachineSequence: asyncSequence)
+  let viewStateMachine = ViewStateMachine(asyncStateMachineSequence: asyncSequence)
 
   var body: some Scene {
     WindowGroup {
-      ContentView(viewState: viewState)
+      ContentView(viewStateMachine: viewStateMachine)
     }
   }
 }
