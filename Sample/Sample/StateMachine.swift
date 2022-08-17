@@ -96,7 +96,7 @@ actor Counter {
 }
 
 
-let asyncSequence = AsyncStateMachineSequence(stateMachine: stateMachine, runtime: runtime)
+let asyncStateMachine = AsyncStateMachine(stateMachine: stateMachine, runtime: runtime)
 
 extension Date {
    func getFormattedDate(format: String) -> String {

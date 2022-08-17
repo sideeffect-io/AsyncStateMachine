@@ -26,7 +26,7 @@ struct ContentView: View {
 
 struct ContentView_Previews: PreviewProvider {
   static let viewStateMachine = ViewStateMachine(
-    asyncStateMachineSequence: asyncSequence
+    asyncStateMachine: asyncStateMachine
   )
 
   static var previews: some View {

@@ -1,4 +1,11 @@
-public final class AsyncStateMachineSequence<S, E, O>: AsyncSequence, Sendable
+//
+//  AsyncStateMachine.swift
+//
+//
+//  Created by Thibault WITTEMBERG on 02/07/2022.
+//
+
+public final class AsyncStateMachine<S, E, O>: AsyncSequence, Sendable
 where S: DSLCompatible & Sendable, E: DSLCompatible & Sendable, O: DSLCompatible {
   public typealias Element = S
   public typealias AsyncIterator =
@@ -44,7 +51,7 @@ where S: DSLCompatible & Sendable, E: DSLCompatible & Sendable, O: DSLCompatible
       stateMiddlewares: runtime.stateMiddlewares
     )
 
-    // As channals are retained as long as there is a sender using it,
+    // As channels are retained as long as there is a sender using it,
     // the receiver will also be retained.
     // That is why it is necesssary to have a weak reference on the self here.
     // Doing so, self will be deallocated event if a channel was using it as a receiver.

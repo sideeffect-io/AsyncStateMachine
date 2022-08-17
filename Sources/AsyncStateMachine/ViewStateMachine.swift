@@ -9,24 +9,24 @@ public class ViewStateMachine<S, E, O>: ObservableObject
 where S: DSLCompatible & Equatable, E: DSLCompatible, O: DSLCompatible {
   @Published public var state: S
 
-  let asyncStateMachineSequence: AsyncStateMachineSequence<S, E, O>
+  let asyncStateMachine: AsyncStateMachine<S, E, O>
 
-  public init(asyncStateMachineSequence: AsyncStateMachineSequence<S, E, O>) {
-    self.asyncStateMachineSequence = asyncStateMachineSequence
-    self.state = self.asyncStateMachineSequence.initialState
+  public init(asyncStateMachine: AsyncStateMachine<S, E, O>) {
+    self.asyncStateMachine = asyncStateMachine
+    self.state = self.asyncStateMachine.initialState
   }
 
   public func send(_ event: E) {
-    self.asyncStateMachineSequence.send(event)
+    self.asyncStateMachine.send(event)
   }
 
   public func send(
     _ event: E,
     resumeWhen predicate: @escaping (S) -> Bool
   ) async {
-    await withUnsafeContinuation { [asyncStateMachineSequence] (continuation: UnsafeContinuation<Void, Never>) in
+    await withUnsafeContinuation { [asyncStateMachine] (continuation: UnsafeContinuation<Void, Never>) in
       Task {
-        await asyncStateMachineSequence.engine.register(onTheFly: { state in
+        await asyncStateMachine.engine.register(onTheFly: { state in
           if predicate(state) {
             continuation.resume()
             // middleware will be unregistered after the predicate has been matched
@@ -35,7 +35,7 @@ where S: DSLCompatible & Equatable, E: DSLCompatible, O: DSLCompatible {
           return false
         })
 
-        asyncStateMachineSequence.send(event)
+        asyncStateMachine.send(event)
       }
     }
   }
@@ -77,7 +77,7 @@ where S: DSLCompatible & Equatable, E: DSLCompatible, O: DSLCompatible {
   }
 
   nonisolated public func start() async {
-    for await state in self.asyncStateMachineSequence {
+    for await state in self.asyncStateMachine {
       await self.publish(state: state)
     }
   }
@@ -90,8 +90,8 @@ public extension ViewStateMachine {
   func binding(send event: @escaping (S) -> E) -> Binding<S> {
     Binding {
       self.state
-    } set: { [asyncStateMachineSequence] value in
-      asyncStateMachineSequence.send(event(value))
+    } set: { [asyncStateMachine] value in
+      asyncStateMachine.send(event(value))
     }
   }
 
@@ -102,8 +102,8 @@ public extension ViewStateMachine {
   func binding<T>(keypath: KeyPath<S, T>, send event: @escaping (T) -> E) -> Binding<T> {
     Binding {
       self.state[keyPath: keypath]
-    } set: { [asyncStateMachineSequence] value in
-      asyncStateMachineSequence.send(event(value))
+    } set: { [asyncStateMachine] value in
+      asyncStateMachine.send(event(value))
     }
   }
 
