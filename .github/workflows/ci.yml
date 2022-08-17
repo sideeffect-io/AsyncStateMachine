@@ -3,13 +3,29 @@ name: Build and test
 on: [push]
 
 jobs:
-  build:
+  Build:
 
     runs-on: macos-12
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout branch
+        uses: actions/checkout@v3
       - name: Build
         run: swift build
-      - name: Run tests
-        run: swift test
+
+  Test:
+
+    runs-on: macos-12
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+      - name: Test
+        run: swift test --enable-code-coverage
+      - name: Generate coverage
+        uses: sersoft-gmbh/swift-coverage-action@v3
+        id: coverage-files
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ${{join(fromJSON(steps.coverage-files.outputs.files), ',')}}
