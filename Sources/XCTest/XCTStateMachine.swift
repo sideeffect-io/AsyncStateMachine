@@ -67,12 +67,12 @@ O: DSLCompatible & Equatable {
   public func assert(
     when states: S...,
     execute expectedOutput: O,
-    fail: (String) -> Void = XCTFail
+    onFail: (String) -> Void = XCTFail
   ) -> Self {
     for state in states {
       let receivedOutput = self.stateMachine.output(for: state)
       guard receivedOutput == expectedOutput else {
-        fail(
+        onFail(
         """
         The assertion failed for state \(state):
         expected output: \(expectedOutput),
@@ -88,11 +88,11 @@ O: DSLCompatible & Equatable {
   @discardableResult
   public func assertNoOutput(
     when states: S...,
-    fail: (String) -> Void = XCTFail
+    onFail: (String) -> Void = XCTFail
   ) -> Self {
     for state in states {
       if let receivedOutput = self.stateMachine.output(for: state) {
-        fail(
+        onFail(
         """
         The assertion failed for state \(state):
         expected no output,

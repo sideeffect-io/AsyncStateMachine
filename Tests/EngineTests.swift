@@ -104,7 +104,7 @@ final class EngineTests: XCTestCase {
     }
 
     // When
-    let removeTask = await sut.register(taskInProgress: task, cancelOn: { _ in true })
+    let removeTask = await sut.register(taskInProgress: task)
 
     // Then
     let tasksInProgressCountBefore = await sut.tasksInProgress.count
@@ -116,6 +116,13 @@ final class EngineTests: XCTestCase {
 
     let tasksInProgressCountAfter = await sut.tasksInProgress.count
     XCTAssertEqual(tasksInProgressCountAfter, 0)
+
+    let receivedOutpout = await sut.resolveOutput(.s1)
+    XCTAssertNil(receivedOutpout)
+    let receivedNextState = await sut.computeNextState(.s1, .e1)
+    XCTAssertNil(receivedNextState)
+    let receivedSideEffect = await sut.resolveSideEffect(.o1)
+    XCTAssertNil(receivedSideEffect)
   }
 
   func test_register_adds_a_task_in_progress_that_can_cancel() async {
@@ -154,6 +161,13 @@ final class EngineTests: XCTestCase {
     XCTAssertEqual(receivedState.criticalState, State.s1)
 
     task.cancel()
+
+    let receivedOutpout = await sut.resolveOutput(.s1)
+    XCTAssertNil(receivedOutpout)
+    let receivedNextState = await sut.computeNextState(.s1, .e1)
+    XCTAssertNil(receivedNextState)
+    let receivedSideEffect = await sut.resolveSideEffect(.o1)
+    XCTAssertNil(receivedSideEffect)
   }
 
   func test_cancelTaskInProgress_cancels_the_expected_task_when_called() async {
@@ -199,6 +213,13 @@ final class EngineTests: XCTestCase {
     XCTAssertEqual(tasksInProgress.count, 1)
 
     taskToRemain.cancel()
+
+    let receivedOutpout = await sut.resolveOutput(.s1)
+    XCTAssertNil(receivedOutpout)
+    let receivedNextState = await sut.computeNextState(.s1, .e1)
+    XCTAssertNil(receivedNextState)
+    let receivedSideEffect = await sut.resolveSideEffect(.o1)
+    XCTAssertNil(receivedSideEffect)
   }
 
   func test_cancelTasksInProgress_cancels_all_tasks_when_called() async {
@@ -224,8 +245,8 @@ final class EngineTests: XCTestCase {
       tasksHaveBeenCancelled.fulfill()
     }
 
-    await sut.register(taskInProgress: taskToCancelA, cancelOn: { state in state == .s1 })
-    await sut.register(taskInProgress: taskToCancelB, cancelOn: { state in state == .s3 })
+    await sut.register(taskInProgress: taskToCancelA)
+    await sut.register(taskInProgress: taskToCancelB)
 
     // When
     await sut.cancelTasksInProgress()
@@ -234,6 +255,13 @@ final class EngineTests: XCTestCase {
 
     let tasksInProgress = await sut.tasksInProgress.values
     XCTAssertTrue(tasksInProgress.isEmpty)
+
+    let receivedOutpout = await sut.resolveOutput(.s1)
+    XCTAssertNil(receivedOutpout)
+    let receivedNextState = await sut.computeNextState(.s1, .e1)
+    XCTAssertNil(receivedNextState)
+    let receivedSideEffect = await sut.resolveSideEffect(.o1)
+    XCTAssertNil(receivedSideEffect)
   }
 
   func test_process_executes_event_middleware_when_called() async {
@@ -309,6 +337,13 @@ final class EngineTests: XCTestCase {
 
     tasksInProgress = await sut.tasksInProgress.values
     XCTAssertTrue(tasksInProgress.isEmpty)
+
+    let receivedOutpout = await sut.resolveOutput(.s1)
+    XCTAssertNil(receivedOutpout)
+    let receivedNextState = await sut.computeNextState(.s1, .e1)
+    XCTAssertNil(receivedNextState)
+    let receivedSideEffect = await sut.resolveSideEffect(.o1)
+    XCTAssertNil(receivedSideEffect)
   }
 
   func test_process_registers_non_cancellable_tasks_on_specific_state_when_called() async {
@@ -320,21 +355,33 @@ final class EngineTests: XCTestCase {
 
     // Given
     let middlewareA = Middleware(execute: { (state: State) in
-      await Task.forEver {
-        middlewaresHaveStarted.fulfill()
-      } onCancel: {
-        middlewareAHasBeenCancelled.apply(criticalState: true)
-      }.value
+      let state = ManagedCriticalState<UnsafeContinuation<Void, Never>?>(nil)
 
-      return false
+      await withTaskCancellationHandler {
+        state.criticalState?.resume()
+        middlewareAHasBeenCancelled.apply(criticalState: true)
+      } operation: {
+        await withUnsafeContinuation { (continuation: UnsafeContinuation<Void, Never>) in
+          state.apply(criticalState: continuation)
+          middlewaresHaveStarted.fulfill()
+        }
+      }
+
+      return true
     }, priority: nil)
 
     let middlewareB = Middleware(execute: { (state: State) in
-      await Task.forEver {
-        middlewaresHaveStarted.fulfill()
-      } onCancel: {
+      let state = ManagedCriticalState<UnsafeContinuation<Void, Never>?>(nil)
+
+      await withTaskCancellationHandler {
+        state.criticalState?.resume()
         middlewareBHasBeenCancelled.apply(criticalState: true)
-      }.value
+      } operation: {
+        await withUnsafeContinuation { (continuation: UnsafeContinuation<Void, Never>) in
+          state.apply(criticalState: continuation)
+          middlewaresHaveStarted.fulfill()
+        }
+      }
 
       return false
     }, priority: nil)
@@ -361,10 +408,24 @@ final class EngineTests: XCTestCase {
     tasksInProgress = await sut.tasksInProgress.values
     XCTAssertEqual(tasksInProgress.count, 2)
 
+    XCTAssertFalse(middlewareAHasBeenCancelled.criticalState)
+    XCTAssertFalse(middlewareBHasBeenCancelled.criticalState)
+
     await sut.cancelTasksInProgress()
 
     tasksInProgress = await sut.tasksInProgress.values
+
+    XCTAssertTrue(middlewareAHasBeenCancelled.criticalState)
+    XCTAssertTrue(middlewareBHasBeenCancelled.criticalState)
+
     XCTAssertTrue(tasksInProgress.isEmpty)
+
+    let receivedOutpout = await sut.resolveOutput(.s1)
+    XCTAssertNil(receivedOutpout)
+    let receivedNextState = await sut.computeNextState(.s1, .e1)
+    XCTAssertNil(receivedNextState)
+    let receivedSideEffect = await sut.resolveSideEffect(.o1)
+    XCTAssertNil(receivedSideEffect)
   }
 
   func test_process_state_cancels_all_eligible_tasks_when_called() async {
@@ -420,6 +481,13 @@ final class EngineTests: XCTestCase {
     XCTAssertEqual(tasksInProgress.count, 1)
 
     taskToNotCancel.cancel()
+
+    let receivedOutpout = await sut.resolveOutput(.s1)
+    XCTAssertNil(receivedOutpout)
+    let receivedNextState = await sut.computeNextState(.s1, .e1)
+    XCTAssertNil(receivedNextState)
+    let receivedSideEffect = await sut.resolveSideEffect(.o1)
+    XCTAssertNil(receivedSideEffect)
   }
 
   func test_process_state_executes_state_middleware_when_called() async {
@@ -495,6 +563,13 @@ final class EngineTests: XCTestCase {
 
     tasksInProgress = await sut.tasksInProgress.values
     XCTAssertTrue(tasksInProgress.isEmpty)
+
+    let receivedOutpout = await sut.resolveOutput(.s1)
+    XCTAssertNil(receivedOutpout)
+    let receivedNextState = await sut.computeNextState(.s1, .e1)
+    XCTAssertNil(receivedNextState)
+    let receivedSideEffect = await sut.resolveSideEffect(.o1)
+    XCTAssertNil(receivedSideEffect)
   }
 
   func test_process_state_execute_side_effects_when_called() async {
@@ -535,6 +610,9 @@ final class EngineTests: XCTestCase {
 
     XCTAssertTrue(resolveSideEffectIsCalled.criticalState)
     XCTAssertEqual(receivedEvent.criticalState, Event.e1)
+
+    let receivedNextState = await sut.computeNextState(.s1, .e1)
+    XCTAssertNil(receivedNextState)
   }
 
   func test_executeSideEffect_execute_side_effect_when_called() async {
@@ -591,6 +669,9 @@ final class EngineTests: XCTestCase {
 
     let tasksInProgress = await sut.tasksInProgress.values
     XCTAssertTrue(tasksInProgress.isEmpty)
+
+    let receivedNextState = await sut.computeNextState(.s1, .e1)
+    XCTAssertNil(receivedNextState)
   }
 
   func test_executeSideEffect_execute_side_effect_when_side_effect_fails() async {
@@ -618,6 +699,9 @@ final class EngineTests: XCTestCase {
 
     let tasksInProgress = await sut.tasksInProgress.values
     XCTAssertTrue(tasksInProgress.isEmpty)
+
+    let receivedNextState = await sut.computeNextState(.s1, .e1)
+    XCTAssertNil(receivedNextState)
   }
 
   func test_register_adds_onTheFly_state_middleware() async {
@@ -625,7 +709,7 @@ final class EngineTests: XCTestCase {
 
     // Given
     let sut = Engine<State, Event, Output>(
-      resolveOutput: { _ in Output.o1 },
+      resolveOutput: { _ in nil },
       computeNextState: { _, _ in nil},
       resolveSideEffect: { _ in nil },
       eventMiddlewares: [],
@@ -646,6 +730,13 @@ final class EngineTests: XCTestCase {
 
     XCTAssertFalse(shouldBeRemoved.unsafelyUnwrapped)
     XCTAssertEqual(receivedState.criticalState, State.s2(value: "value"))
+
+    let receivedOutpout = await sut.resolveOutput(.s1)
+    XCTAssertNil(receivedOutpout)
+    let receivedNextState = await sut.computeNextState(.s1, .e1)
+    XCTAssertNil(receivedNextState)
+    let receivedSideEffect = await sut.resolveSideEffect(.o1)
+    XCTAssertNil(receivedSideEffect)
   }
 
   func test_deinit_cancels_all_tasks_when_called () async {
@@ -674,8 +765,15 @@ final class EngineTests: XCTestCase {
       tasksHaveBeenCancelled.fulfill()
     }
 
-    await sut?.register(taskInProgress: taskToCancelA, cancelOn: { state in state == .s1 })
-    await sut?.register(taskInProgress: taskToCancelB, cancelOn: { state in state == .s3 })
+    await sut?.register(taskInProgress: taskToCancelA)
+    await sut?.register(taskInProgress: taskToCancelB)
+
+    let receivedOutpout = await sut?.resolveOutput(.s1)
+    XCTAssertNil(receivedOutpout)
+    let receivedNextState = await sut?.computeNextState(.s1, .e1)
+    XCTAssertNil(receivedNextState)
+    let receivedSideEffect = await sut?.resolveSideEffect(.o1)
+    XCTAssertNil(receivedSideEffect)
 
     // When
     sut = nil

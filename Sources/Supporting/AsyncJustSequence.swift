@@ -8,6 +8,10 @@ public struct AsyncJustSequence<Element>: AsyncSequence {
     self.element = element
   }
 
+  public init(element: Element?) {
+    self.init { element }
+  }
+
   public func makeAsyncIterator() -> Iterator {
     Iterator(self.element)
   }

@@ -10,20 +10,22 @@ import XCTest
 
 final class AsyncCompactScanSequenceTests: XCTestCase {
   func test_asyncCompactScanSequence_emits_initial_result() async {
-    let expected = Int.random(in: 0...1000)
+    let expectedInitial = Int.random(in: 0...1000)
 
     // Given
-    let sut = AsyncEmptySequence<String>()
-      .compactScan(expected) { accumulator, value in
+    let sut = AsyncJustSequence<String> { "next" }
+      .compactScan(expectedInitial) { accumulator, value in
         accumulator + value.count
       }
 
     // When
     var iterator = sut.makeAsyncIterator()
     let received = await iterator.next()
+    let receivedNext = await iterator.next()
 
     // Them
-    XCTAssertEqual(received, expected)
+    XCTAssertEqual(received, expectedInitial)
+    XCTAssertEqual(receivedNext, expectedInitial + "next".count)
   }
 
   func test_asyncCompactScanSequence_applies_transform_and_finishes_when_base_finished() async {
@@ -48,7 +50,7 @@ final class AsyncCompactScanSequenceTests: XCTestCase {
 
   func test_asyncCompactScanSequence_returns_nil_pastEnd() async {
     // Given
-    let sut = AsyncEmptySequence<String>()
+    let sut = AsyncJustSequence<String> { "1" }
       .compactScan("0") { accumulator, value in
         "\(accumulator)-\(value)"
       }
@@ -65,7 +67,7 @@ final class AsyncCompactScanSequenceTests: XCTestCase {
 
   func test_asyncCompactScanSequence_throws_when_base_throws() async {
     // Given
-    let sut = AsyncThrowingSequence<Int>()
+    let sut = AsyncThrowingSequence<Int>(failAt: 1, element: 1)
       .compactScan("0") { accumulator, value in
         "\(accumulator)-\(value)"
       }

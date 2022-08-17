@@ -11,13 +11,31 @@ struct AsyncThrowingSequence<Element>: AsyncSequence {
   typealias Element = Element
   typealias AsyncIterator = Iterator
 
+  let failAtIndex: Int
+  let element: Element?
+
+  init(failAt index: Int = 0, element: Element? = nil) {
+    self.failAtIndex = index
+    self.element = element
+  }
+
   func makeAsyncIterator() -> AsyncIterator {
-    Iterator()
+    Iterator(failAtIndex: self.failAtIndex, element: self.element)
   }
 
   struct Iterator: AsyncIteratorProtocol {
-    func next() async throws -> Element? {
-      throw MockError()
+    let failAtIndex: Int
+    let element: Element?
+
+    var count = 0
+
+    mutating func next() async throws -> Element? {
+      if count == self.failAtIndex {
+        throw MockError()
+      }
+
+      self.count += 1
+      return self.element
     }
   }
 }

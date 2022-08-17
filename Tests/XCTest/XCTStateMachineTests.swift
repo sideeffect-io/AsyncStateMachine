@@ -26,25 +26,20 @@ final class XCTStateMachineTests: XCTestCase {
   }
 
   func test_assertNoOutput_succeeds_when_no_output() {
-    var failIsCalled = false
-
     // Given
     let stateMachine = StateMachine<State, Event, Output>(initial: State.s1) {
       When(state: State.s1) { _ in
         Execute.noOutput
-      } transitions: { _ in
       }
 
       When(state: State.s2(value:)) { _ in
         Execute.noOutput
-      } transitions: { _ in
       }
     }
 
     // When
     // Then
-    XCTStateMachine(stateMachine).assertNoOutput(when: State.s1, State.s2(value: "value"), fail: { _ in failIsCalled = true })
-    XCTAssertFalse(failIsCalled)
+    XCTStateMachine(stateMachine).assertNoOutput(when: State.s1, State.s2(value: "value"))
   }
 
   func test_assertNoOutput_fails_when_output() {
@@ -54,45 +49,38 @@ final class XCTStateMachineTests: XCTestCase {
     let stateMachine = StateMachine<State, Event, Output>(initial: State.s1) {
       When(state: State.s1) { _ in
         Execute.noOutput
-      } transitions: { _ in
       }
 
       When(state: State.s2(value:)) { _ in
         Execute(output: .o1)
-      } transitions: { _ in
       }
     }
 
     // When
     XCTStateMachine(stateMachine)
-      .assertNoOutput(when: State.s1, State.s2(value: "value"), fail: { _ in failIsCalled = true })
+      .assertNoOutput(when: State.s1, State.s2(value: "value"), onFail: { _ in failIsCalled = true })
 
     // Then
     XCTAssertTrue(failIsCalled)
   }
 
   func test_assert_whenStates_succeeds_when_experted_output() {
-    var failIsCalled = false
-
     // Given
     let stateMachine = StateMachine<State, Event, Output>(initial: State.s1) {
       When(state: State.s1) { _ in
         Execute.noOutput
-      } transitions: { _ in
       }
 
       When(state: State.s2(value:)) { _ in
         Execute(output: .o1)
-      } transitions: { _ in
       }
     }
 
     // When
     // Then
     XCTStateMachine(stateMachine)
-      .assert(when: State.s2(value: "value"), execute: Output.o1, fail: { _ in failIsCalled = true })
-
-    XCTAssertFalse(failIsCalled)
+      .assertNoOutput(when: State.s1)
+      .assert(when: State.s2(value: "value"), execute: Output.o1)
   }
 
   func test_assert_whenStates_fails_when_unexperted_output() {
@@ -102,26 +90,23 @@ final class XCTStateMachineTests: XCTestCase {
     let stateMachine = StateMachine<State, Event, Output>(initial: State.s1) {
       When(state: State.s1) { _ in
         Execute.noOutput
-      } transitions: { _ in
       }
 
       When(state: State.s2(value:)) { _ in
         Execute(output: .o1)
-      } transitions: { _ in
       }
     }
 
     // When
     // Then
     XCTStateMachine(stateMachine)
-      .assert(when: State.s2(value: "value"), execute: Output.o2, fail: { _ in failIsCalled = true })
+      .assertNoOutput(when: State.s1)
+      .assert(when: State.s2(value: "value"), execute: Output.o2, onFail: { _ in failIsCalled = true })
 
     XCTAssertTrue(failIsCalled)
   }
 
   func test_assertNoTransition_succeeds_when_no_transition() async {
-    var failIsCalled = false
-
     // Given
     let stateMachine = StateMachine<State, Event, Output>(initial: State.s1) {
       When(state: State.s1) { _ in
@@ -144,9 +129,11 @@ final class XCTStateMachineTests: XCTestCase {
     // When
     // Then
     await XCTStateMachine(stateMachine)
-      .assertNoTransition(when: State.s1, State.s2(value: "value"), on: Event.e2(value: "value"), fail: { _ in failIsCalled = true })
-
-    XCTAssertFalse(failIsCalled)
+      .assertNoTransition(when: State.s1, State.s2(value: "value"), on: Event.e2(value: "value"))
+      .assert(when: State.s1, on: Event.e1, transitionTo: State.s3)
+      .assert(when: State.s2(value: ""), on: Event.e1, transitionTo: State.s3)
+      .assertNoOutput(when: State.s1)
+      .assert(when: State.s2(value: ""), execute: Output.o1)
   }
 
   func test_assertNoTransition_succeeds_when_transition() async {
@@ -175,13 +162,14 @@ final class XCTStateMachineTests: XCTestCase {
     // Then
     await XCTStateMachine(stateMachine)
       .assertNoTransition(when: State.s1, State.s2(value: "value"), on: Event.e1, fail: { _ in failIsCalled = true })
+      .assertNoOutput(when: State.s1)
+      .assert(when: State.s2(value: ""), on: Event.e1, transitionTo: State.s3)
+      .assert(when: State.s2(value: ""), execute: Output.o1)
 
     XCTAssertTrue(failIsCalled)
   }
 
   func test_assertTransitionTo_succeeds_when_transition() async {
-    var failIsCalled = false
-
     // Given
     let stateMachine = StateMachine<State, Event, Output>(initial: State.s1) {
       When(state: State.s1) { _ in
@@ -204,9 +192,9 @@ final class XCTStateMachineTests: XCTestCase {
     // When
     // Then
     await XCTStateMachine(stateMachine)
-      .assert(when: State.s1, State.s2(value: "value"), on: Event.e1, transitionTo: State.s3, fail: { _ in failIsCalled = true })
-
-    XCTAssertFalse(failIsCalled)
+      .assert(when: State.s1, State.s2(value: "value"), on: Event.e1, transitionTo: State.s3)
+      .assertNoOutput(when: State.s1)
+      .assert(when: State.s2(value: ""), execute: Output.o1)
   }
 
   func test_assertTransitionTo_fails_when_transition_to_wrong_state() async {
@@ -235,6 +223,9 @@ final class XCTStateMachineTests: XCTestCase {
     // Then
     await XCTStateMachine(stateMachine)
       .assert(when: State.s1, State.s2(value: "value"), on: Event.e1, transitionTo: State.s1, fail: { _ in failIsCalled = true })
+      .assertNoOutput(when: State.s1)
+      .assert(when: State.s2(value: ""), execute: Output.o1)
+      .assert(when: State.s2(value: ""), on: Event.e1, transitionTo: State.s3)
 
     XCTAssertTrue(failIsCalled)
   }
@@ -246,12 +237,10 @@ final class XCTStateMachineTests: XCTestCase {
     let stateMachine = StateMachine<State, Event, Output>(initial: State.s1) {
       When(state: State.s1) { _ in
         Execute.noOutput
-      } transitions: { _ in
       }
 
       When(state: State.s2(value:)) { _ in
         Execute(output: .o1)
-      } transitions: { _ in
       }
     }
 
@@ -259,6 +248,8 @@ final class XCTStateMachineTests: XCTestCase {
     // Then
     await XCTStateMachine(stateMachine)
       .assert(when: State.s1, State.s2(value: "value"), on: Event.e1, transitionTo: State.s3, fail: { _ in failIsCalled = true })
+      .assertNoOutput(when: State.s1)
+      .assert(when: State.s2(value: ""), execute: Output.o1)
 
     XCTAssertTrue(failIsCalled)
   }
