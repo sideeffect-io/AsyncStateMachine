@@ -1,6 +1,6 @@
 //
-//  InjectTests.swift
-//  
+//  ThrowingInjectTests.swift
+//
 //
 //  Created by Thibault WITTEMBERG on 02/07/2022.
 //
@@ -8,8 +8,8 @@
 @testable import AsyncStateMachine
 import XCTest
 
-final class InjectTests: XCTestCase {
-  func test_inject_returns_function_with_no_parameter_when_inject_1_parameter() async {
+final class ThrowingInjectTests: XCTestCase {
+  func test_inject_returns_function_with_no_parameter_when_inject_1_parameter() async throws {
     let expectedParam = Int.random(in: 0...100)
     let receivedParam = ManagedCriticalState<Int?>(nil)
 
@@ -18,21 +18,21 @@ final class InjectTests: XCTestCase {
     // Given
     let received = inject(
       dep: expectedParam,
-      in: { param -> Int in
+      in: { param async throws -> Int in
         receivedParam.apply(criticalState: param)
         return expectedResult
       }
     )
 
     // When
-    let receivedResult = await received()
+    let receivedResult = try await received()
 
     // Then
     XCTAssertEqual(receivedParam.criticalState, expectedParam)
     XCTAssertEqual(receivedResult, expectedResult)
   }
 
-  func test_inject_returns_function_with_no_parameter_when_inject_2_parameters() async {
+  func test_inject_returns_function_with_no_parameter_when_inject_2_parameters() async throws {
     let expectedParam1 = Int.random(in: 0...100)
     let expectedParam2 = Int.random(in: 0...100)
     let receivedParam1 = ManagedCriticalState<Int?>(nil)
@@ -44,7 +44,7 @@ final class InjectTests: XCTestCase {
     let received = inject(
       deps: expectedParam1,
       expectedParam2,
-      in: { param1, param2 -> Int in
+      in: { param1, param2 async throws -> Int in
         receivedParam1.apply(criticalState: param1)
         receivedParam2.apply(criticalState: param2)
         return expectedResult
@@ -52,7 +52,7 @@ final class InjectTests: XCTestCase {
     )
 
     // When
-    let receivedResult = await received()
+    let receivedResult = try await received()
 
     // Then
     XCTAssertEqual(receivedParam1.criticalState, expectedParam1)
@@ -60,7 +60,7 @@ final class InjectTests: XCTestCase {
     XCTAssertEqual(receivedResult, expectedResult)
   }
 
-  func test_inject_returns_function_with_no_parameter_when_inject_3_parameters() async {
+  func test_inject_returns_function_with_no_parameter_when_inject_3_parameters() async throws {
     let expectedParam1 = Int.random(in: 0...100)
     let expectedParam2 = Int.random(in: 0...100)
     let expectedParam3 = Int.random(in: 0...100)
@@ -75,7 +75,7 @@ final class InjectTests: XCTestCase {
       deps: expectedParam1,
       expectedParam2,
       expectedParam3,
-      in: { param1, param2, param3 -> Int in
+      in: { param1, param2, param3 async throws -> Int in
         receivedParam1.apply(criticalState: param1)
         receivedParam2.apply(criticalState: param2)
         receivedParam3.apply(criticalState: param3)
@@ -84,7 +84,7 @@ final class InjectTests: XCTestCase {
     )
 
     // When
-    let receivedResult = await received()
+    let receivedResult = try await received()
 
     // Then
     XCTAssertEqual(receivedParam1.criticalState, expectedParam1)
@@ -93,7 +93,7 @@ final class InjectTests: XCTestCase {
     XCTAssertEqual(receivedResult, expectedResult)
   }
 
-  func test_inject_returns_function_with_no_parameter_when_inject_4_parameters() async {
+  func test_inject_returns_function_with_no_parameter_when_inject_4_parameters() async throws {
     let expectedParam1 = Int.random(in: 0...100)
     let expectedParam2 = Int.random(in: 0...100)
     let expectedParam3 = Int.random(in: 0...100)
@@ -111,7 +111,7 @@ final class InjectTests: XCTestCase {
       expectedParam2,
       expectedParam3,
       expectedParam4,
-      in: { param1, param2, param3, param4 -> Int in
+      in: { param1, param2, param3, param4 async throws -> Int in
         receivedParam1.apply(criticalState: param1)
         receivedParam2.apply(criticalState: param2)
         receivedParam3.apply(criticalState: param3)
@@ -120,7 +120,7 @@ final class InjectTests: XCTestCase {
       })
 
     // When
-    let receivedResult = await received()
+    let receivedResult = try await received()
 
     // Then
     XCTAssertEqual(receivedParam1.criticalState, expectedParam1)
@@ -130,7 +130,7 @@ final class InjectTests: XCTestCase {
     XCTAssertEqual(receivedResult, expectedResult)
   }
 
-  func test_inject_returns_function_with_no_parameter_when_inject_5_parameters() async {
+  func test_inject_returns_function_with_no_parameter_when_inject_5_parameters() async throws {
     let expectedParam1 = Int.random(in: 0...100)
     let expectedParam2 = Int.random(in: 0...100)
     let expectedParam3 = Int.random(in: 0...100)
@@ -151,7 +151,7 @@ final class InjectTests: XCTestCase {
       expectedParam3,
       expectedParam4,
       expectedParam5,
-      in: { param1, param2, param3, param4, param5 -> Int in
+      in: { param1, param2, param3, param4, param5 async throws -> Int in
         receivedParam1.apply(criticalState: param1)
         receivedParam2.apply(criticalState: param2)
         receivedParam3.apply(criticalState: param3)
@@ -161,7 +161,7 @@ final class InjectTests: XCTestCase {
       })
 
     // When
-    let receivedResult = await received()
+    let receivedResult = try await received()
 
     // Then
     XCTAssertEqual(receivedParam1.criticalState, expectedParam1)
@@ -172,7 +172,7 @@ final class InjectTests: XCTestCase {
     XCTAssertEqual(receivedResult, expectedResult)
   }
 
-  func test_inject_returns_function_with_no_parameter_when_inject_6_parameters() async {
+  func test_inject_returns_function_with_no_parameter_when_inject_6_parameters() async throws {
     let expectedParam1 = Int.random(in: 0...100)
     let expectedParam2 = Int.random(in: 0...100)
     let expectedParam3 = Int.random(in: 0...100)
@@ -196,7 +196,7 @@ final class InjectTests: XCTestCase {
       expectedParam4,
       expectedParam5,
       expectedParam6,
-      in: { param1, param2, param3, param4, param5, param6 -> Int in
+      in: { param1, param2, param3, param4, param5, param6 async throws -> Int in
         receivedParam1.apply(criticalState: param1)
         receivedParam2.apply(criticalState: param2)
         receivedParam3.apply(criticalState: param3)
@@ -207,7 +207,7 @@ final class InjectTests: XCTestCase {
       })
 
     // When
-    let receivedResult = await received()
+    let receivedResult = try await received()
 
     // Then
     XCTAssertEqual(receivedParam1.criticalState, expectedParam1)
@@ -219,7 +219,7 @@ final class InjectTests: XCTestCase {
     XCTAssertEqual(receivedResult, expectedResult)
   }
 
-  func test_inject_returns_function_with_1_parameter_when_inject_2_parameters() async {
+  func test_inject_returns_function_with_1_parameter_when_inject_2_parameters() async throws {
     let expectedParam1 = Int.random(in: 0...100)
     let expectedParam2 = Int.random(in: 0...100)
     let receivedParam1 = ManagedCriticalState<Int?>(nil)
@@ -228,9 +228,9 @@ final class InjectTests: XCTestCase {
     let expectedResult = Int.random(in: 0...100)
 
     // Given
-    let received: (Int) async -> Int = inject(
+    let received: (Int) async throws -> Int = inject(
       dep: expectedParam2,
-      in: { param1, param2 -> Int in
+      in: { param1, param2 async throws -> Int in
         receivedParam1.apply(criticalState: param1)
         receivedParam2.apply(criticalState: param2)
         return expectedResult
@@ -238,7 +238,7 @@ final class InjectTests: XCTestCase {
     )
 
     // When
-    let receivedResult = await received(expectedParam1)
+    let receivedResult = try await received(expectedParam1)
 
     // Then
     XCTAssertEqual(receivedParam1.criticalState, expectedParam1)
@@ -246,7 +246,7 @@ final class InjectTests: XCTestCase {
     XCTAssertEqual(receivedResult, expectedResult)
   }
 
-  func test_inject_returns_function_with_1_parameter_when_inject_3_parameters() async {
+  func test_inject_returns_function_with_1_parameter_when_inject_3_parameters() async throws {
     let expectedParam1 = Int.random(in: 0...100)
     let expectedParam2 = Int.random(in: 0...100)
     let expectedParam3 = Int.random(in: 0...100)
@@ -257,10 +257,10 @@ final class InjectTests: XCTestCase {
     let expectedResult = Int.random(in: 0...100)
 
     // Given
-    let received: (Int) async -> Int = inject(
+    let received: (Int) async throws -> Int = inject(
       deps: expectedParam2,
       expectedParam3,
-      in: { param1, param2, param3 -> Int in
+      in: { param1, param2, param3 async throws -> Int in
         receivedParam1.apply(criticalState: param1)
         receivedParam2.apply(criticalState: param2)
         receivedParam3.apply(criticalState: param3)
@@ -269,7 +269,7 @@ final class InjectTests: XCTestCase {
     )
 
     // When
-    let receivedResult = await received(expectedParam1)
+    let receivedResult = try await received(expectedParam1)
 
     // Then
     XCTAssertEqual(receivedParam1.criticalState, expectedParam1)
@@ -278,7 +278,7 @@ final class InjectTests: XCTestCase {
     XCTAssertEqual(receivedResult, expectedResult)
   }
 
-  func test_inject_returns_function_with_1_parameter_when_inject_4_parameters() async {
+  func test_inject_returns_function_with_1_parameter_when_inject_4_parameters() async throws {
     let expectedParam1 = Int.random(in: 0...100)
     let expectedParam2 = Int.random(in: 0...100)
     let expectedParam3 = Int.random(in: 0...100)
@@ -291,11 +291,11 @@ final class InjectTests: XCTestCase {
     let expectedResult = Int.random(in: 0...100)
 
     // Given
-    let received: (Int) async -> Int = inject(
+    let received: (Int) async throws -> Int = inject(
       deps: expectedParam2,
       expectedParam3,
       expectedParam4,
-      in: { param1, param2, param3, param4 -> Int in
+      in: { param1, param2, param3, param4 async throws -> Int in
         receivedParam1.apply(criticalState: param1)
         receivedParam2.apply(criticalState: param2)
         receivedParam3.apply(criticalState: param3)
@@ -305,7 +305,7 @@ final class InjectTests: XCTestCase {
     )
 
     // When
-    let receivedResult = await received(expectedParam1)
+    let receivedResult = try await received(expectedParam1)
 
     // Then
     XCTAssertEqual(receivedParam1.criticalState, expectedParam1)
@@ -315,7 +315,7 @@ final class InjectTests: XCTestCase {
     XCTAssertEqual(receivedResult, expectedResult)
   }
 
-  func test_inject_returns_function_with_1_parameter_when_inject_5_parameters() async {
+  func test_inject_returns_function_with_1_parameter_when_inject_5_parameters() async throws {
     let expectedParam1 = Int.random(in: 0...100)
     let expectedParam2 = Int.random(in: 0...100)
     let expectedParam3 = Int.random(in: 0...100)
@@ -330,12 +330,12 @@ final class InjectTests: XCTestCase {
     let expectedResult = Int.random(in: 0...100)
 
     // Given
-    let received: (Int) async -> Int = inject(
+    let received: (Int) async throws -> Int = inject(
       deps: expectedParam2,
       expectedParam3,
       expectedParam4,
       expectedParam5,
-      in: { param1, param2, param3, param4, param5 -> Int in
+      in: { param1, param2, param3, param4, param5 async throws -> Int in
         receivedParam1.apply(criticalState: param1)
         receivedParam2.apply(criticalState: param2)
         receivedParam3.apply(criticalState: param3)
@@ -346,7 +346,7 @@ final class InjectTests: XCTestCase {
     )
 
     // When
-    let receivedResult = await received(expectedParam1)
+    let receivedResult = try await received(expectedParam1)
 
     // Then
     XCTAssertEqual(receivedParam1.criticalState, expectedParam1)
@@ -357,7 +357,7 @@ final class InjectTests: XCTestCase {
     XCTAssertEqual(receivedResult, expectedResult)
   }
 
-  func test_inject_returns_function_with_1_parameter_when_inject_6_parameters() async {
+  func test_inject_returns_function_with_1_parameter_when_inject_6_parameters() async throws {
     let expectedParam1 = Int.random(in: 0...100)
     let expectedParam2 = Int.random(in: 0...100)
     let expectedParam3 = Int.random(in: 0...100)
@@ -374,13 +374,13 @@ final class InjectTests: XCTestCase {
     let expectedResult = Int.random(in: 0...100)
 
     // Given
-    let received: (Int) async -> Int = inject(
+    let received: (Int) async throws -> Int = inject(
       deps: expectedParam2,
       expectedParam3,
       expectedParam4,
       expectedParam5,
       expectedParam6,
-      in: { param1, param2, param3, param4, param5, param6 -> Int in
+      in: { param1, param2, param3, param4, param5, param6 async throws -> Int in
         receivedParam1.apply(criticalState: param1)
         receivedParam2.apply(criticalState: param2)
         receivedParam3.apply(criticalState: param3)
@@ -392,7 +392,7 @@ final class InjectTests: XCTestCase {
     )
 
     // When
-    let receivedResult = await received(expectedParam1)
+    let receivedResult = try await received(expectedParam1)
 
     // Then
     XCTAssertEqual(receivedParam1.criticalState, expectedParam1)

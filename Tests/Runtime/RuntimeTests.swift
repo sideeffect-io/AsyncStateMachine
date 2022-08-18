@@ -172,9 +172,8 @@ final class RuntimeTests: XCTestCase {
     let middleware = sut.stateMiddlewares.first!
 
     // Then
-    let shouldRemoveAfterExecution = await middleware.execute(State.s2(value: "value"))
+    await middleware.execute(State.s2(value: "value"))
     XCTAssertEqual(receivedState.criticalState, State.s2(value: "value"))
-    XCTAssertFalse(shouldRemoveAfterExecution)
     XCTAssertEqual(middleware.priority, .userInitiated)
   }
 
@@ -192,9 +191,8 @@ final class RuntimeTests: XCTestCase {
     let middleware = sut.eventMiddlewares.first!
 
     // Then
-    let shouldRemoveAfterExecution = await middleware.execute(Event.e2(value: "value"))
+    await middleware.execute(Event.e2(value: "value"))
     XCTAssertEqual(receivedEvent.criticalState, Event.e2(value: "value"))
-    XCTAssertFalse(shouldRemoveAfterExecution)
     XCTAssertEqual(middleware.priority, .userInitiated)
   }
 

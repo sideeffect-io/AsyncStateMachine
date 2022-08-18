@@ -5,15 +5,47 @@
 //  Created by Thibault WITTEMBERG on 02/07/2022.
 //
 
-public class ViewStateMachine<S, E, O>: ObservableObject
-where S: DSLCompatible & Equatable, E: DSLCompatible, O: DSLCompatible {
-  @Published public var state: S
+public typealias RawViewStateMachine<S, E, O> = ViewStateMachine<S, S, E, O>
+where S: Equatable & DSLCompatible, E: DSLCompatible, O: DSLCompatible
 
+public final class ViewStateMachine<VS, S, E, O>: ObservableObject, @unchecked Sendable
+where VS: Equatable & Sendable, S: DSLCompatible, E: DSLCompatible, O: DSLCompatible {
+  struct SendSuspension {
+    let predicate: (S) -> Bool
+    let continuation: UnsafeContinuation<Void, Never>
+  }
+
+  @Published public internal(set) var state: VS
   let asyncStateMachine: AsyncStateMachine<S, E, O>
+  let stateToViewState: @Sendable (S) -> VS
+  let suspensions: ManagedCriticalState<[SendSuspension]>
+  let running: ManagedCriticalState<Bool>
+  let onStart: @Sendable () -> Void
 
-  public init(asyncStateMachine: AsyncStateMachine<S, E, O>) {
+  public convenience init(
+    asyncStateMachine: AsyncStateMachine<S, E, O>,
+    stateToViewState: @Sendable @escaping (S) -> VS
+  ) {
+    self.init(asyncStateMachine: asyncStateMachine, stateToViewState: stateToViewState, onStart: {})
+  }
+
+  public convenience init(
+    asyncStateMachine: AsyncStateMachine<S, E, O>
+  ) where VS == S {
+    self.init(asyncStateMachine: asyncStateMachine, stateToViewState: { $0 }, onStart: {})
+  }
+
+  init(
+    asyncStateMachine: AsyncStateMachine<S, E, O>,
+    stateToViewState: @Sendable @escaping (S) -> VS,
+    onStart: @Sendable @escaping () -> Void
+  ) {
     self.asyncStateMachine = asyncStateMachine
-    self.state = self.asyncStateMachine.initialState
+    self.stateToViewState = stateToViewState
+    self.state = stateToViewState(self.asyncStateMachine.initialState)
+    self.suspensions = ManagedCriticalState([])
+    self.running = ManagedCriticalState(false)
+    self.onStart = onStart
   }
 
   public func send(_ event: E) {
@@ -24,19 +56,12 @@ where S: DSLCompatible & Equatable, E: DSLCompatible, O: DSLCompatible {
     _ event: E,
     resumeWhen predicate: @escaping (S) -> Bool
   ) async {
-    await withUnsafeContinuation { [asyncStateMachine] (continuation: UnsafeContinuation<Void, Never>) in
-      Task {
-        await asyncStateMachine.engine.register(onTheFly: { state in
-          if predicate(state) {
-            continuation.resume()
-            // middleware will be unregistered after the predicate has been matched
-            return true
-          }
-          return false
-        })
-
-        asyncStateMachine.send(event)
+    await withUnsafeContinuation { [suspensions, asyncStateMachine] (continuation: UnsafeContinuation<Void, Never>) in
+      suspensions.withCriticalRegion { suspensions in
+        suspensions.append(SendSuspension(predicate: predicate, continuation: continuation))
       }
+
+      asyncStateMachine.send(event)
     }
   }
 
@@ -70,15 +95,45 @@ where S: DSLCompatible & Equatable, E: DSLCompatible, O: DSLCompatible {
     )
   }
 
-  @MainActor func publish(state: S) {
+  @MainActor func publish(state: VS) {
     if state != self.state {
       self.state = state
     }
   }
 
-  nonisolated public func start() async {
+  public func start() async {
+    let earlyExit = self.running.withCriticalRegion { running -> Bool in
+      if !running {
+        running = true
+        return false
+      }
+      return true
+    }
+
+    if earlyExit {
+      return
+    }
+
+    self.onStart()
+
     for await state in self.asyncStateMachine {
-      await self.publish(state: state)
+      let viewState = self.stateToViewState(state)
+      await self.publish(state: viewState)
+
+      // resuming suspended sends if the state is the expected one
+      let continuations = self.suspensions.withCriticalRegion { suspensions -> [UnsafeContinuation<Void, Never>] in
+        var continuations = [UnsafeContinuation<Void, Never>]()
+        suspensions = suspensions.compactMap { suspension in
+          if suspension.predicate(state) {
+            continuations.append(suspension.continuation)
+            return nil
+          }
+          return suspension
+        }
+        return continuations
+      }
+
+      continuations.forEach { $0.resume() }
     }
   }
 }
@@ -87,7 +142,7 @@ where S: DSLCompatible & Equatable, E: DSLCompatible, O: DSLCompatible {
 import SwiftUI
 
 public extension ViewStateMachine {
-  func binding(send event: @escaping (S) -> E) -> Binding<S> {
+  func binding(send event: @escaping (VS) -> E) -> Binding<VS> {
     Binding {
       self.state
     } set: { [asyncStateMachine] value in
@@ -95,11 +150,11 @@ public extension ViewStateMachine {
     }
   }
 
-  func binding(send event: E) -> Binding<S> {
+  func binding(send event: E) -> Binding<VS> {
     self.binding(send: { _ in event })
   }
 
-  func binding<T>(keypath: KeyPath<S, T>, send event: @escaping (T) -> E) -> Binding<T> {
+  func binding<T>(keypath: KeyPath<VS, T>, send event: @escaping (T) -> E) -> Binding<T> {
     Binding {
       self.state[keyPath: keypath]
     } set: { [asyncStateMachine] value in
@@ -107,7 +162,7 @@ public extension ViewStateMachine {
     }
   }
 
-  func binding<T>(keypath: KeyPath<S, T>, send event: E) -> Binding<T> {
+  func binding<T>(keypath: KeyPath<VS, T>, send event: E) -> Binding<T> {
     self.binding(keypath: keypath, send: { _ in event })
   }
 }
