@@ -13,8 +13,7 @@ where S: DSLCompatible & Sendable, E: DSLCompatible & Sendable, O: DSLCompatible
 
   let initialState: S
   let eventChannel: AsyncBufferedChannel<E>
-  let currentState: ManagedCriticalState<S?>
-  let engine: Engine<S, E, O>
+  let stateSequence: AsyncOnEachSequence<AsyncSerialSequence<AsyncCompactScanSequence<AsyncOnEachSequence<AsyncBufferedChannel<E>>, S>>>
   let deinitBlock: @Sendable () -> Void
 
   public convenience init(
@@ -34,8 +33,8 @@ where S: DSLCompatible & Sendable, E: DSLCompatible & Sendable, O: DSLCompatible
     onDeinit: (() -> Void)? = nil
   ) {
     self.initialState = stateMachine.initial
-    self.eventChannel = AsyncBufferedChannel<E>()
-    self.currentState = ManagedCriticalState(nil)
+    let channel = AsyncBufferedChannel<E>()
+    self.eventChannel = channel
     self.deinitBlock = {
       runtime.channelReceivers.forEach { channelReceiver in
         channelReceiver.update(receiver: nil)
@@ -43,7 +42,7 @@ where S: DSLCompatible & Sendable, E: DSLCompatible & Sendable, O: DSLCompatible
       onDeinit?()
     }
 
-    self.engine = Engine(
+    let engine = Engine(
       resolveOutput: stateMachine.output(for:),
       computeNextState: stateMachine.reduce(when:on:),
       resolveSideEffect: runtime.sideEffects(for:),
@@ -51,14 +50,21 @@ where S: DSLCompatible & Sendable, E: DSLCompatible & Sendable, O: DSLCompatible
       stateMiddlewares: runtime.stateMiddlewares
     )
 
+    self.stateSequence = self
+      .eventChannel
+      .onEach { event in await engine.process(event: event) }
+      .compactScan(self.initialState, engine.computeNextState)
+      .serial()
+      .onEach { state in await engine.process(state: state, sendBackEvent: channel.send(_:)) }
+
     // As channels are retained as long as there is a sender using it,
     // the receiver will also be retained.
     // That is why it is necesssary to have a weak reference on the self here.
     // Doing so, self will be deallocated event if a channel was using it as a receiver.
     // Channels are resilient to nil receiver functions.
     runtime.channelReceivers.forEach { channelReceiver in
-      channelReceiver.update { [weak self] event in
-        self?.send(event)
+      channelReceiver.update { event in
+        channel.send(event)
       }
     }
   }
@@ -74,12 +80,6 @@ where S: DSLCompatible & Sendable, E: DSLCompatible & Sendable, O: DSLCompatible
   }
 
   public func makeAsyncIterator() -> AsyncIterator {
-    self
-      .eventChannel
-      .onEach { [weak self] event in await self?.engine.process(event: event) }
-      .compactScan(self.initialState, self.engine.computeNextState)
-      .serial()
-      .onEach { [weak self] state in await self?.engine.process(state: state, sendBackEvent: self?.send(_:)) }
-      .makeAsyncIterator()
+    self.stateSequence.makeAsyncIterator()
   }
 }

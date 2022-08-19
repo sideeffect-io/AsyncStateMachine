@@ -17,8 +17,8 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
   let resolveSideEffect: @Sendable (O) -> SideEffect<S, E, O>?
   let onDeinit: (() -> Void)?
 
-  var eventMiddlewares: OrderedStorage<Middleware<E>>
-  var stateMiddlewares: OrderedStorage<Middleware<S>>
+  var eventMiddlewares: [Middleware<E>]
+  var stateMiddlewares: [Middleware<S>]
   var tasksInProgress: OrderedStorage<TaskInProgress<S>>
 
   init(
@@ -32,8 +32,8 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
     self.resolveOutput = resolveOutput
     self.computeNextState = computeNextState
     self.resolveSideEffect = resolveSideEffect
-    self.stateMiddlewares = OrderedStorage(contentOf: stateMiddlewares)
-    self.eventMiddlewares = OrderedStorage(contentOf: eventMiddlewares)
+    self.stateMiddlewares = stateMiddlewares
+    self.eventMiddlewares = eventMiddlewares
     self.tasksInProgress = OrderedStorage()
     self.onDeinit = onDeinit
   }
@@ -104,9 +104,8 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
   ) async -> [Task<Void, Never>] {
     // executes event middlewares for this event
     self.process(
-      middlewares: self.eventMiddlewares.indexedValues,
-      using: event,
-      removeMiddleware: { [weak self] index in await self?.removeEventMiddleware(index: index) }
+      middlewares: self.eventMiddlewares,
+      using: event
     )
   }
 
@@ -120,9 +119,8 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
 
     // executes state middlewares for this state
     let removeTasksInProgressTasks = self.process(
-      middlewares: self.stateMiddlewares.indexedValues,
-      using: state,
-      removeMiddleware: { [weak self] index in await self?.removeStateMiddleware(index: index) }
+      middlewares: self.stateMiddlewares,
+      using: state
     )
 
     // executes side effect for this state if any
@@ -133,18 +131,14 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
 
   @discardableResult
   func process<T>(
-    middlewares: [(Int, Middleware<T>)],
-    using value: T,
-    removeMiddleware: @escaping (Int) async -> Void
+    middlewares: [Middleware<T>],
+    using value: T
   ) -> [Task<Void, Never>] {
     var removeTaskInProgressTasks = [Task<Void, Never>]()
 
-    for (index, middleware) in middlewares {
+    for middleware in middlewares {
       let task: Task<Void, Never> = Task(priority: middleware.priority) {
-        let shouldRemove = await middleware.execute(value)
-        if shouldRemove {
-          await removeMiddleware(index)
-        }
+        await middleware.execute(value)
       }
 
       // middlewares are not cancelled on any specific state
@@ -181,20 +175,6 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
       taskInProgress: task,
       cancelOn: sideEffect.strategy.predicate
     )
-  }
-
-  func register(onTheFly execute: @Sendable @escaping (S) async -> Bool) {
-    self.stateMiddlewares.append(
-      Middleware<S>(execute: execute, priority: nil)
-    )
-  }
-
-  func removeEventMiddleware(index: Int) {
-    self.eventMiddlewares.remove(index: index)
-  }
-
-  func removeStateMiddleware(index: Int) {
-    self.stateMiddlewares.remove(index: index)
   }
 
   deinit {

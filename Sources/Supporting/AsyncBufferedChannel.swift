@@ -106,11 +106,11 @@ where Element: Sendable {
     }
   }
 
-  func send(_ element: Element) {
+  @Sendable func send(_ element: Element) {
     self.send(.element(element))
   }
 
-  func finish() {
+  @Sendable func finish() {
     self.send(.termination)
   }
 

@@ -5,7 +5,6 @@
 //  Created by Thibault WITTEMBERG on 20/06/2022.
 //
 
-#if canImport(SwiftUI)
 @testable import AsyncStateMachine
 import XCTest
 
@@ -212,6 +211,99 @@ final class ViewStateMachineTests: XCTestCase {
     // Then
   }
 
+  func test_start_iterates_once_when_called_twice() {
+    let viewStateMachineHasStarted = expectation(description: "The ViewStateMachine has started")
+    let secondStartHasResumedImmediately = expectation(description: "The second start has resumed immediately")
+
+    let onStartCounter = ManagedCriticalState<Int>(0)
+
+    // Given
+    let stateMachine = StateMachine<State, Event, Never>(initial: State.s1) {}
+    let runtime = Runtime<State, Event, Never>()
+
+    let sequence = AsyncStateMachine(stateMachine: stateMachine, runtime: runtime)
+    let sut = ViewStateMachine(asyncStateMachine: sequence, stateToViewState: { $0 }, onStart: {
+      onStartCounter.withCriticalRegion { counter in
+        counter += 1
+      }
+      viewStateMachineHasStarted.fulfill()
+    })
+
+    // When
+    Task {
+      await sut.start()
+    }
+
+    wait(for: [viewStateMachineHasStarted], timeout: 1.0)
+
+    Task {
+      await sut.start()
+      secondStartHasResumedImmediately.fulfill()
+    }
+
+    // Then
+    wait(for: [secondStartHasResumedImmediately], timeout: 1.0)
+
+    XCTAssertEqual(onStartCounter.criticalState, 1)
+  }
+
+  func test_publishes_viewState_when_init_with_mapper() {
+    struct ViewState: Equatable {
+      let isState1: Bool
+    }
+
+    let allViewStatesHaveBeenReceived = expectation(description: "All ViewStates have been received")
+    allViewStatesHaveBeenReceived.expectedFulfillmentCount = 2
+
+    let receivedStatesInMapper = ManagedCriticalState<[State]>([])
+    var receivedViewStates = [ViewState]()
+    
+    let mapper: @Sendable (State) -> ViewState = { state in
+      receivedStatesInMapper.withCriticalRegion { states in
+        states.append(state)
+      }
+      return ViewState(isState1: state == .s1)
+    }
+
+    // Given
+    let stateMachine = StateMachine<State, Event, Never>(initial: State.s1) {
+      When(state: .s1) { _ in
+        Execute.noOutput
+      } transitions: { _ in
+        On(event: .e1) { _ in
+          Transition(to: .s2)
+        }
+      }
+    }
+    let runtime = Runtime<State, Event, Never>()
+
+    let sequence = AsyncStateMachine(stateMachine: stateMachine, runtime: runtime)
+    let sut = ViewStateMachine(asyncStateMachine: sequence, stateToViewState: mapper)
+
+    let cancellable = sut.$state.sink { viewState in
+      receivedViewStates.append(viewState)
+      allViewStatesHaveBeenReceived.fulfill()
+    }
+
+    // When
+    Task {
+      await sut.start()
+    }
+
+    sut.send(.e1)
+
+    // Then
+    wait(for: [allViewStatesHaveBeenReceived], timeout: 1.0)
+
+    XCTAssertEqual(receivedStatesInMapper.criticalState, [.s1, .s1, .s2])
+    XCTAssertEqual(receivedViewStates, [ViewState(isState1: true), ViewState(isState1: false)])
+
+    cancellable.cancel()
+  }
+}
+
+#if canImport(SwiftUI)
+extension ViewStateMachineTests {
   func test_binding_returns_binding_that_sends_event_when_passing_event() async {
     let eventWasReceived = expectation(description: "Event was received")
     let receivedEvent = ManagedCriticalState<Event?>(nil)

@@ -29,3 +29,21 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           files: ${{join(fromJSON(steps.coverage-files.outputs.files), ',')}}
+
+  Samples:
+
+    runs-on: macos-12
+
+    strategy:
+      matrix:
+        project: [TaskTracker]
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+      - name: Test
+        uses: sersoft-gmbh/xcodebuild-action@v2
+        with:
+          project: ./Samples/${{ matrix.project }}/${{ matrix.project }}.xcodeproj
+          scheme: ${{ matrix.project }}
+          destination: "platform=iOS Simulator,name=iPhone 13 Pro"
+          action: test

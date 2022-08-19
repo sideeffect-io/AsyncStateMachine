@@ -141,7 +141,6 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
       Middleware<S>(
         execute: { state in
           await middleware(state)
-          return false
         },
         priority: priority
       )
@@ -161,7 +160,6 @@ where S: DSLCompatible, E: DSLCompatible & Sendable, O: DSLCompatible {
       Middleware<E>(
         execute: { event in
           await middleware(event)
-          return false
         },
         priority: priority
       )

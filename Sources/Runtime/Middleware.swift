@@ -6,6 +6,6 @@
 //
 
 struct Middleware<T> {
-  let execute: @Sendable (T) async -> Bool
+  let execute: @Sendable (T) async -> Void
   let priority: TaskPriority?
 }
