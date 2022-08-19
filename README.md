@@ -327,8 +327,8 @@ func deinit() {
 
 ## Extras
 
-### Conditionally resumable `send()` function 
-
+  <details>
+    <summary>Conditionally resumable `send()` function</summary>
 Allows to send an event while awaiting for a specific state or set of states to resume.
 
 ```swift
@@ -337,9 +337,10 @@ await viewStateMachine.send(
   resumeWhen: .closed
 )`
 ```
+  </details>
 
-### Side effect cancellation
-
+  <details>
+    <summary>Side effect cancellation</summary>
 Make `close(speed:)` side effect execution be cancelled when the state machine produces any new states. It is also possible to cancel on a specific state.
 
 ```swift 
@@ -349,26 +350,28 @@ Runtime.map(
 	strategy: .cancelWhenAnyState
 )
 ```
+  </details>
 
-### States set
-
+  <details>
+    <summary>States set</summary>
 Allows to factorize the same transition for a set of states.
 
 ```swift
 When(states: OneOf {
-	State.closing(persons:),
-	State.closed
+        State.closing(persons:),
+        State.closed
 }) { _ in
-	Execute.noOutput
+        Execute.noOutput
 } transitions: {
-	On(event: Event.closeButtonWasPressed) { _ in
-		Transition(to: State.opening)
-	}
-}`
+        On(event: Event.closeButtonWasPressed) { _ in
+                Transition(to: State.opening)
+        }
+}` 
 ```
+  </details>
 
-### SwiftUI bindings
-
+  <details>
+    <summary>SwiftUI bindings</summary>
 Allows to create a SwiftUI binding on the current state, sending an Event when the binding changes.
 
 ```swift
@@ -380,9 +383,10 @@ Allows to create a SwiftUI binding on a property of the current state, sending a
 ```swift
 self.viewStateMachine.binding(keypath: \.persons, send: .closeButtonWasPressed)
 ```
+  </details>
 
-### Connecting two state machines
-
+  <details>
+    <summary>Connecting two state machines</summary>
 This will send the event `OtherEvent.refresh` in the other state machine when the first state machine's state is `State.closed`.
 
 ```swift
@@ -391,9 +395,10 @@ let channel = Channel<OtherEvent>()
 let runtime = Runtime<State, Event, Output>()
   ...
   .connectAsSender(to: channel, when: State.closed, send: OtherEvent.refresh)
-	
-
+  
+  
 let otherRuntime = Runtime<OtherState, OtherEvent, OtherOutput>()
   ...
   .connectAsReceiver(to: channel)
 ```
+  </details>
