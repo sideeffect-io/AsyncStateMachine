@@ -16,8 +16,8 @@ final class Binding_DebounceTests: XCTestCase {
 
       //                |        500      1000      1500      2000       2500       |
       //                |    |    |    |    |    |    |    |    |    |    |    |    |
-      // timeline       0    1    2         3                   4567           8
-      // debounced                       2      3                       7           8
+      // timeline       0    1    2         3                   456            7
+      // debounced                       2      3                       6           7
 
     let events = [
       (0, DispatchTimeInterval.milliseconds(0)),
@@ -25,10 +25,9 @@ final class Binding_DebounceTests: XCTestCase {
       (2, DispatchTimeInterval.milliseconds(500)),
       (3, DispatchTimeInterval.milliseconds(1_000)),
       (4, DispatchTimeInterval.milliseconds(2_000)),
-      (5, DispatchTimeInterval.milliseconds(2_025)),
-      (6, DispatchTimeInterval.milliseconds(2_050)),
-      (7, DispatchTimeInterval.milliseconds(2_075)),
-      (8, DispatchTimeInterval.milliseconds(2_750))
+      (5, DispatchTimeInterval.milliseconds(2_050)),
+      (6, DispatchTimeInterval.milliseconds(2_100)),
+      (7, DispatchTimeInterval.milliseconds(2_750))
     ]
 
     var received = [Int]()
@@ -38,7 +37,7 @@ final class Binding_DebounceTests: XCTestCase {
       1
     } set: { value in
       received.append(value)
-      if value == 8 {
+      if value == 7 {
         lastValueSet.fulfill()
       }
     }.debounce(for: .milliseconds(300))
@@ -55,7 +54,7 @@ final class Binding_DebounceTests: XCTestCase {
     wait(for: [lastValueSet], timeout: 10)
 
     // Then
-    XCTAssertEqual(received, [2, 3, 7, 8])
+    XCTAssertEqual(received, [2, 3, 6, 7])
   }
 
   func test_nanoseconds_converts_values() {

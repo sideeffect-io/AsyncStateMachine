@@ -7,7 +7,7 @@
 
 import OSLog
 
-let logger = Logger(subsystem: "io.sideeffect.asyncstatemachine.TaskTracker", category: "entries")
+let logger = Logger(subsystem: "io.sideeffect.asyncstatemachine.SearchApis", category: "entries")
 let isUnitTesting = ProcessInfo.processInfo.environment["IS_UNIT_TESTING"] == "1"
 
 @Sendable func logToOSLog(state: State) async -> Void {

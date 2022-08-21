@@ -36,7 +36,7 @@ jobs:
 
     strategy:
       matrix:
-        project: [TaskTracker]
+        project: [TaskTracker, SearchApis]
     steps:
       - name: Checkout branch
         uses: actions/checkout@v3

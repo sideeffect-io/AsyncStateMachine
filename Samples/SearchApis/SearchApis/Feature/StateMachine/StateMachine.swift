@@ -17,6 +17,8 @@ func stateMachine(initial: State) -> StateMachine<State, Event, Output> {
       Execute.noOutput
     } transitions: { _ in
       On(event: Event.searchIsRequested(query:)) { query in
+        Guard(predicate: !query.isEmpty)
+      } transition: { query in
         Transition(to: State.searching(query: query))
       }
     }

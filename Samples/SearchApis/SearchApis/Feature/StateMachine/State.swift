@@ -13,3 +13,14 @@ case searching(query: String)
 case loaded(query: String, entries: [Entry])
 case failed
 }
+
+extension State: CustomStringConvertible {
+  var description: String {
+    switch self {
+      case .idle: return "idle"
+      case .searching(let query): return "search with the query \(query)"
+      case .loaded(_, let entries): return "loaded with \(entries.count) entries"
+      case .failed: return "failed"
+    }
+  }
+}
