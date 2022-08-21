@@ -7,13 +7,14 @@
 
 public final class AsyncStateMachine<S, E, O>: AsyncSequence, Sendable
 where S: DSLCompatible & Sendable, E: DSLCompatible & Sendable, O: DSLCompatible {
+  public typealias StateSequence =
+  AsyncOnEachSequence<AsyncSerialSequence<AsyncCompactScanSequence<AsyncOnEachSequence<AsyncBufferedChannel<E>>, S>>>
   public typealias Element = S
-  public typealias AsyncIterator =
-  AsyncOnEachSequence<AsyncSerialSequence<AsyncCompactScanSequence<AsyncOnEachSequence<AsyncBufferedChannel<E>>, S>>>.Iterator
+  public typealias AsyncIterator = StateSequence.Iterator
 
   let initialState: S
   let eventChannel: AsyncBufferedChannel<E>
-  let stateSequence: AsyncOnEachSequence<AsyncSerialSequence<AsyncCompactScanSequence<AsyncOnEachSequence<AsyncBufferedChannel<E>>, S>>>
+  let stateSequence: StateSequence
   let deinitBlock: @Sendable () -> Void
 
   public convenience init(
