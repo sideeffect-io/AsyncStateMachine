@@ -383,6 +383,12 @@ Allows to create a SwiftUI binding on a property of the current state, sending a
 ```swift
 self.viewStateMachine.binding(keypath: \.persons, send: .closeButtonWasPressed)
 ```
+
+Allows to create a SwiftUI binding on a property of the current state, sending an Event when the binding changes, debounced with the specified dueTime.
+  
+```swift
+self.viewStateMachine.binding(keypath: \.persons, send: .closeButtonWasPressed).debounce(for: .seconds(1))
+```
   </details>
 
   <details>
