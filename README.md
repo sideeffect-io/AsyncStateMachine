@@ -381,13 +381,18 @@ self.viewStateMachine.binding(send: .closeButtonWasPressed)
 Allows to create a SwiftUI binding on a property of the current state, sending an Event when the binding changes.
 
 ```swift
-self.viewStateMachine.binding(keypath: \.persons, send: .closeButtonWasPressed)
+self.viewStateMachine.binding(
+  keypath: \.persons,
+  send: .closeButtonWasPressed
+)
 ```
 
 Allows to create a SwiftUI binding on a property of the current state, sending an Event when the binding changes, debounced with the specified dueTime.
   
 ```swift
-self.viewStateMachine.binding(keypath: \.persons, send: .closeButtonWasPressed).debounce(for: .seconds(1))
+self.viewStateMachine
+  .binding(send: .closeButtonWasPressed)
+  .debounce(for: .seconds(1))
 ```
   </details>
 
