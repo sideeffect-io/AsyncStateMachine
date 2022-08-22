@@ -17,6 +17,12 @@ struct RootView: View {
         List(self.stateMachine.state.entries) { entry in
           Text("\(entry.api) (\(entry.link))")
         }
+        .refreshable {
+          await self.stateMachine.send(
+            Event.refreshIsRequested,
+            resumeWhen: State.loaded(context:)
+          )
+        }
 
         if self.stateMachine.state.isSearching {
           ProgressView()
@@ -59,10 +65,18 @@ struct RootView_Previews: PreviewProvider {
 
   static var previews: some View {
     Group {
-      RootView(stateMachine: mockViewStateMachine(initial: .idle))
-      RootView(stateMachine: mockViewStateMachine(initial: .searching(query: "mar")))
-      RootView(stateMachine: mockViewStateMachine(initial: .loaded(query: "mar", entries: mockEntries)))
-      RootView(stateMachine: mockViewStateMachine(initial: .failed))
+      RootView(
+        stateMachine: mockViewStateMachine(initial: .idle)
+      )
+      RootView(
+        stateMachine: mockViewStateMachine(initial: .searching(context: State.Context(query: "Mar")))
+      )
+      RootView(
+        stateMachine: mockViewStateMachine(initial: .loaded(context: State.Context(query: "mar", entries: mockEntries)))
+      )
+      RootView(
+        stateMachine: mockViewStateMachine(initial: .failed)
+      )
     }
   }
 }

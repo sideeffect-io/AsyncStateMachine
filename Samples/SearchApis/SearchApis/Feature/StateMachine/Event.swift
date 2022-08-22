@@ -8,7 +8,8 @@
 import AsyncStateMachine
 
 enum Event: DSLCompatible, Equatable {
-case searchIsRequested(query: String)
-case searchHasSucceeded(entries: [Entry])
-case searchHasFailed
+  case searchIsRequested(query: String)
+  case searchHasSucceeded(entries: [Entry])
+  case searchHasFailed
+  case refreshIsRequested
 }

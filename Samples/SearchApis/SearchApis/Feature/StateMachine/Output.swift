@@ -8,5 +8,5 @@
 import AsyncStateMachine
 
 enum Output: DSLCompatible, Equatable {
-case search(query: String)
+  case search(query: String)
 }
