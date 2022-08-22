@@ -1,5 +1,5 @@
 //
-//  AsyncSubjectTests.swift
+//  AsyncBufferedChannelTests.swift
 //  
 //
 //  Created by Thibault WITTEMBERG on 06/08/2022.
@@ -8,7 +8,7 @@
 @testable import AsyncStateMachine
 import XCTest
 
-final class AsyncSubjectTests: XCTestCase {
+final class AsyncBufferedChannelTests: XCTestCase {
   func test_send_queues_elements_and_delivers_to_one_consumer() async {
     let expected = [1, 2, 3, 4, 5]
 
