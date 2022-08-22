@@ -10,20 +10,20 @@ import SwiftUI
 extension State {
   var query: String {
     switch self {
-      case .searching(let query), .loaded(let query, _): return query
+      case .searching(let context), .loaded(let context): return context.query
       default: return ""
     }
   }
 
   var entries: [Entry] {
     switch self {
-      case .loaded(_, let entries): return entries
+      case .searching(let context), .loaded(let context): return context.entries
       default: return []
     }
   }
 
   var isSearching: Bool {
-    if case .searching = self {
+    if case .searching(let context) = self, context.entries.isEmpty {
       return true
     }
     return false

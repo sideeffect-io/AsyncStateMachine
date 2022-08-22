@@ -8,18 +8,23 @@
 import AsyncStateMachine
 
 enum State: DSLCompatible, Equatable {
-case idle
-case searching(query: String)
-case loaded(query: String, entries: [Entry])
-case failed
+  case idle
+  case searching(context: Context)
+  case loaded(context: Context)
+  case failed
+
+  struct Context: Equatable {
+    let query: String
+    var entries: [Entry] = []
+  }
 }
 
 extension State: CustomStringConvertible {
   var description: String {
     switch self {
       case .idle: return "idle"
-      case .searching(let query): return "search with the query \(query)"
-      case .loaded(_, let entries): return "loaded with \(entries.count) entries"
+      case .searching(let context): return "search with the query \(context.query), previous \(context.entries.count) entries"
+      case .loaded(let context): return "loaded with the query \(context.query), previous \(context.entries.count) entries"
       case .failed: return "failed"
     }
   }

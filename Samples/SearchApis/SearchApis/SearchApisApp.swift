@@ -13,7 +13,7 @@ var viewStateMachine: RawViewStateMachine<State, Event, Output> {
 
   let stateMachine = stateMachine(initial: .idle)
   let runtime = Runtime<State, Event, Output>()
-    .map(output: Output.search(query:), to: searchSideEffect)
+    .map(output: Output.search(query:), to: searchSideEffect, priority: .low, strategy: .cancel(when: State.searching(context:)))
     .register(middleware: logToOSLog(state:))
 
   let asyncStateMachine = AsyncStateMachine(stateMachine: stateMachine, runtime: runtime)
